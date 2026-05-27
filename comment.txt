@@ -1,0 +1,3 @@
+need to add AR92 and AR95 files
+need to add info about size_frat_20 to csv files 
+need to reformat dates in R script

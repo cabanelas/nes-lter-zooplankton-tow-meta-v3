@@ -1,0 +1,328 @@
+---
+title: "Volume sampled plots for NES LTER bongo samples"
+author: "Alexandra Cabanelas Bermudez"
+date: "2024-10-03"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width=5, fig.height=4)
+```
+
+```{r echo = FALSE, include = FALSE}
+#PACKAGES
+library(here)
+library(tidyverse)
+library(tidyr)
+library(RColorBrewer)
+library(ggthemes)
+library(ggpubr)
+library(cowplot)
+```
+
+```{r echo=FALSE}
+#created in bongoEventLogMerge.R
+towTimes <- read.csv(file.path("output",
+                               "nes-lter-zooplankton-tow-metadata-v2.csv"),
+                     header = T)
+```
+
+## Calculate total time elapsed per tow
+```{r include = FALSE}
+# need to convert time to seconds 
+
+# convert TIME columns to POSIXct format
+towTimes$date_time_start_UTC <- as.POSIXct(towTimes$date_time_start_UTC, 
+                                           format="%Y-%m-%d %H:%M:%S", 
+                                           tz="UTC")
+towTimes$date_time_end_UTC <- as.POSIXct(towTimes$date_time_end_UTC, 
+                                         format="%Y-%m-%d %H:%M:%S", 
+                                         tz="UTC")
+```
+
+```{r}
+towTimes$seconds_elapsed <- ifelse(
+  towTimes$date_time_end_UTC < towTimes$date_time_start_UTC, 
+  as.numeric(difftime(towTimes$date_time_end_UTC + 24 * 60 * 60, 
+                      towTimes$date_time_start_UTC, 
+                      units = "secs")),
+  as.numeric(difftime(towTimes$date_time_end_UTC, 
+                      towTimes$date_time_start_UTC, 
+                      units = "secs"))
+)
+```
+
+### Tow length (time) Plots
+
+```{r echo=FALSE, include=FALSE}
+towTimes$station <- factor(towTimes$station, 
+                           levels = c("MVCO", "L1", "L2", "L3", "L4", "L5", 
+                                      "L6", "L7", "L8", "L9", "L10", "L11", "u11c"))
+```
+
+```{r echo = FALSE, fig.width=14, fig.height=10}
+ggplot(towTimes %>% 
+         filter(!is.na(seconds_elapsed), station != "u11c"), 
+       aes(x = station, 
+           y = seconds_elapsed)) +
+  geom_bar(stat = "identity", 
+           position = position_dodge()) +
+  theme_minimal() +
+  labs(y = "Elapsed Time (seconds)") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank()) +
+  facet_wrap(~ cruise, scales = "free_y", ncol = 5) 
+```
+
+```{r include = FALSE}
+towTimes_long <- towTimes %>%
+  pivot_longer(cols = c(seconds_elapsed), 
+               names_to = "elapsed_time_type", 
+               values_to = "elapsed_time")
+unique_cruises <- unique(towTimes$cruise)
+```
+
+
+```{r warning = FALSE, echo = FALSE, fig.width=8, fig.height=4}
+ggplot(subset(towTimes_long, station != "u11c"), 
+       aes(x = station, y = elapsed_time, color = cruise)) +
+  geom_point(size = 2.3) +
+  theme_minimal() +
+  labs(title = "Tow total time", y = "Elapsed Time (seconds)") +
+  theme(legend.title = element_blank(),
+        legend.text = element_text(size = 11, color = "black"),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 15, color = "black"), 
+        axis.text.x = element_text(size = 15, color = "black"), 
+        axis.text.y = element_text(size = 12, color = "black"), 
+        plot.title = element_text(size = 18, face = "bold", color = "black")) 
+
+ggplot(subset(towTimes_long, station != "u11c"), 
+       aes(x = station, y = elapsed_time)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Tow total time", y = "Elapsed Time (seconds)") +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 15, color = "black"), 
+        axis.text.x = element_text(size = 15, color = "black"), 
+        axis.text.y = element_text(size = 12, color = "black"), 
+        plot.title = element_text(size = 18, face = "bold", color = "black")) 
+```
+
+
+
+
+
+## Calculate Volume of water sampled 
+
+### Using flowmeter values 
+
+Volume Sampled = (Flow End - Flow Start) * Flow calibration factor * Gear Area (m^2)
+
+- Flowmeter calibration factor = 0.26873
+- Gear Area = 0.2922 m^2
+   
+- tot_flow_counts_mesh <- flowmeter_end - flowmeter_start  # total counts
+- revolutions <- total_counts / 10   # counts to revolutions
+- total flow <- revolutions * 26873   # standard speed rotor constant
+
+### Using ship speed & sampling time
+
+V=(A) (T) (S)
+
+where:
+
+- V = calculated volume of water filtered (in meters cubed)
+- A = area of net mouth (in meters squared) = 0.2922
+- T = duration of tow (in seconds)
+- S = ship speed during tow (in meters per second)
+
+```{r echo = FALSE}
+#constants
+diameter_m <- 0.61  # diameter in meters
+radius_m <- diameter_m / 2  # radius in meters
+A <- pi * radius_m^2  # area of the net mouth in square meters
+
+#ship_speed <- knots * 0.514444 # knots converted to m/s
+```
+
+```{r}
+towTimes <- towTimes %>%
+  filter(instrument == "Bongo Net") %>%  # Filter for instrument
+  mutate(
+    GEAR_VOLUME_CALCULATED = A * seconds_elapsed * (ifelse(is.na(STW_start), 
+                                                          ifelse(is.na(STW_end), 1.5, abs(STW_end)), 
+                                                          abs(STW_start)) * 0.514444)
+  )
+```
+
+```{r echo = FALSE, include = FALSE}
+towTimes_long2 <- towTimes %>%
+  pivot_longer(cols = c(vol_filtered_m3_150, vol_filtered_m3_335), 
+               names_to = "volume_type", 
+               values_to = "vol_filtered_m3") %>%
+  mutate(volume_type = recode(volume_type, 
+                              vol_filtered_m3_150 = "150 µm", 
+                              vol_filtered_m3_335 = "335 µm"))
+towTimes_long_melted <- towTimes %>%
+  pivot_longer(cols = c(vol_filtered_m3_335, 
+                        vol_filtered_m3_150, 
+                        GEAR_VOLUME_CALCULATED), 
+               names_to = "volume_type", 
+               values_to = "value") %>%
+  mutate(volume_type = recode(volume_type, 
+                              vol_filtered_m3_150 = "150 µm", 
+                              vol_filtered_m3_335 = "335 µm"))
+```
+
+
+<span style="GEAR_VOLUME_CALCULATED below == volume sampled in meters squared calculated using ship speed and sampling time as specified above">red</span> text line.
+
+```{r, warning=FALSE, echo = FALSE, fig.width=11, fig.height=6}
+unique_cruises1 <- unique(towTimes_long2$cruise)
+for (cruise in unique_cruises1) {
+  
+  # scatter plot - left panel
+  scatter_plot <- ggplot(towTimes_long2 %>% filter(cruise == !!cruise & 
+                                                   !is.na(vol_filtered_m3)), 
+                         aes(x = GEAR_VOLUME_CALCULATED, 
+                             y = vol_filtered_m3, 
+                             color = volume_type, 
+                             shape = volume_type)) +
+    geom_abline(slope = 1, intercept = 0, 
+                linetype = "dashed", color = "darkgrey", size = 1.2) +
+    geom_point(size = 3.2) +
+    scale_y_continuous(limits = c(0, 600)) +  
+    scale_x_continuous(limits = c(0, 600)) + 
+    scale_color_manual(values = c("#17356E", "#00BFB2")) +#"#755675", "#6ECC6C", "#78DF77", "#2F452E",
+    labs(title = paste("Cruise:", cruise), 
+         x = "Gear Volume Calculated (m³)",
+         y = "Volume Filtered (m³)") +
+    theme_few() +
+    theme(legend.title = element_blank(),
+          legend.text = element_text(size = 15, color = "black"),
+          axis.title = element_text(size = 15, color = "black"), 
+          axis.text = element_text(size = 14, color = "black"),
+          legend.position = "bottom")
+  
+  # bar plot - right panel
+  bar_plot <- ggplot(towTimes_long_melted %>% filter(cruise == !!cruise), 
+                     aes(x = station, y = value, fill = volume_type)) +
+    geom_bar(stat = "identity", position = position_dodge(width = 0.8)) +
+    scale_fill_manual(values = c("#17356E", "#00BFB2", "#CD4942")) + 
+    scale_y_continuous(expand = c(0, 0)) +
+    labs(title = paste("Cruise:", cruise), 
+         y = "Volume Filtered (m³)") +
+    theme_few() +
+    theme(axis.title.y = element_blank(), 
+          axis.title.x = element_blank(),
+          axis.text = element_text(size = 14, color = "black"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = 15, color = "black"),
+          legend.position = "bottom",
+          axis.text.x = element_text(angle = 45, hjust = 1)
+          )
+  
+  # combine plots
+  combined_plot <- plot_grid(scatter_plot, bar_plot, ncol = 2)
+
+  print(combined_plot) 
+  
+}
+```
+
+\newpage
+
+## Summary
+
+AR32 flowmeter vals look good, use those  
+**AR38 L3 and L10 something off; L3 bad 335 flow; L10 bad GEAR_VOLUME_CALC**  
+AR63 its okay  
+AR77 L2 and L9 bad GEAR_VOLUME_CALC?; but flowmeter vals look good, use those  
+AT46 flowmeter vals look good, use those  
+EN608 flowmeter vals look good, use those; no times for L6-L11  
+**EN617 L11 looks high but comparable to each other**  
+**EN627 bad flowmeter cruise; use GEAR_VOLUME_CALC?**  
+EN644 good  
+EN649 good  
+EN655 good  
+EN657 MVCO 150 flow bad; use GEAR_VOLUME_CALC  
+EN661 good  
+EN668 L2, L3, L4 bad 335 flow; use GEAR_VOLUME_CALC  
+**EN687 L8 the 150 flow looks suspect?, possibly use GEAR_VOLUME_CALC**   
+EN695 okay  
+EN706 L5 bad 150 flow; use GEAR_VOLUME_CALC  
+**EN712 it seems like the 150 flow was low? at L1, L7, L11**  
+**EN715 looks pretty good; 335 flow a bit high at L6**  
+EN720 good  
+**HRS2303 L9 flow possibly too high?**  
+  
+  
+\newpage
+
+
+
+
+### extra
+
+```{r echo = FALSE, fig.width=12, fig.height=10}
+ggplot(towTimes %>% filter(!is.na(vol_filtered_m3_335) & 
+                             vol_filtered_m3_335 > 0 & 
+                             station != "u11c"), 
+       aes(x = station, y = vol_filtered_m3_335)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cruise, scales = "free") +
+  theme_minimal() +
+  labs(title = "Free y-axis",
+       y = "Volume Filtered 335 µm") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        plot.title = element_text(size = 18))
+ggplot(towTimes %>% filter(!is.na(vol_filtered_m3_335) & 
+                             vol_filtered_m3_335 > 0 & 
+                             station != "u11c"), 
+       aes(x = station, y = vol_filtered_m3_335)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cruise) +
+  theme_minimal() +
+  labs(title = "Fixed y-axis",
+       y = "Volume Filtered 335 µm") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        plot.title = element_text(size = 18))
+```
+
+```{r echo = FALSE, fig.width=12, fig.height=10}
+ggplot(towTimes %>% filter(!is.na(vol_filtered_m3_150) & 
+                             vol_filtered_m3_150 > 0 & 
+                             station != "u11c"), 
+       aes(x = station, y = vol_filtered_m3_150)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cruise, scales = "free") +
+  theme_minimal() +
+  labs(title = "Free y-axis",
+       y = "Volume Filtered 150 µm") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        plot.title = element_text(size = 18))
+ggplot(towTimes %>% filter(!is.na(vol_filtered_m3_150) & 
+                             vol_filtered_m3_150 > 0 & 
+                             station != "u11c"), 
+       aes(x = station, y = vol_filtered_m3_150)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(~ cruise) +
+  theme_minimal() +
+  labs(title = "Fixed y-axis",
+       y = "Volume Filtered 150 µm") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(size = 16),
+        plot.title = element_text(size = 18))
+```
+
