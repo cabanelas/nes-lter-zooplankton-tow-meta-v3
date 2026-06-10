@@ -285,6 +285,11 @@ combined_dataframe <- combined_dataframe %>%
       cruise == "AR88" & station == "L6" & cast == "10" ~
         as.POSIXct("2025-04-27 00:00:00", tz = "UTC"),
       TRUE ~ datetime_UTC_end
+    ),
+    # fix depth target typo
+    depth_target = case_when(
+      cruise == "AR99" & station == "L8" & cast == "20" ~ "133",
+      TRUE ~ depth_target
     )
   )
 
@@ -338,6 +343,15 @@ tow_meta_v3 %>%
 
 # date range makes sense
 range(tow_meta_v3$datetime_UTC_start, na.rm = TRUE)
+
+# depth target shouldnt be > 200m
+tow_meta_v3 %>%
+  summarise(
+    min_depth  = min(depth_target, na.rm = TRUE),
+    max_depth  = max(depth_target, na.rm = TRUE),
+    n_na       = sum(is.na(depth_target)),
+    n_over_200 = sum(depth_target > 200, na.rm = TRUE)
+  )
 
 ## ------------------------------------------ ##
 #            Save -----
