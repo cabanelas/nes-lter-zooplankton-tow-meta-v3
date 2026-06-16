@@ -293,6 +293,8 @@ combined_dataframe <- combined_dataframe %>%
     )
   )
 
+## LATER MAY NEED TO CHECK AND ADD MORE
+
 combined_dataframe %>%
   filter(!is.na(datetime_UTC_start), !is.na(datetime_UTC_end)) %>%
   mutate(
