@@ -11,6 +11,9 @@
 ##
 ################################################################################
 # OOI;no bongo, no ring: AR34A, AR22, AR24a, AR24c, AR28A, AR31C, AR39A, AR44, AR48A, AR48B
+# NOTE: AE2426 and HRS2601 have no through-water speed in the underway
+# only wind speed/GPS-derived SOG. speedlog_waterspeedfwd is NA for these 
+# STW-based volume unavailable for tows on these two cruises
 
 ## ------------------------------------------ ##
 #            Packages -----
