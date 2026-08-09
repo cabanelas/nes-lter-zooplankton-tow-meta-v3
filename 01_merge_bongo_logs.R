@@ -7,11 +7,14 @@
 ##          (2024-2026) with published v2 inventory metadata, producing
 ##          a combined dataset for v3 EDI package (2018-2026 cruises).
 ##
+##  This adds data starting AE2426 (fall 2024)
+##        v2 had up to EN720
+##
 ##  This is NOT the final v3 metadata; still needs:
 ##                - TDR max depths
 ##                - Haul factors
 ##                - Primary/secondary flags
-##                - AR92 and AR95 raw log sheets
+##                - AR99, hrs2601, hrs2609 raw log sheets
 ##
 ## Inputs (data/raw/):
 ##   - bongo_logs/*.csv           (new cruise event log datasheets)
@@ -32,7 +35,7 @@
 #            Packages -----
 ## ------------------------------------------ ##
 library(here)
-library(readr) #for read_csv (faster than read.csv)
+library(readr) 
 library(dplyr)
 library(lubridate)
 
