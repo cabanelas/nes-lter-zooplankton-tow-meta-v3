@@ -2,4 +2,23 @@
 .RData
 .Rproj.user/
 *.Rproj
-data/
+
+# --- data/: ignore by default, then whitelist specific paths ---
+data/*
+!data/raw/
+!data/output/
+
+# data/raw: ignore its contents, then re-include specific files + bongo_logs
+data/raw/*
+!data/raw/bongo_logs/
+!data/raw/all_eventLogs_26SEP2024.csv
+!data/raw/max_depth_tdr_corrected.csv
+!data/raw/nes-lter-zooplankton-tow-metadata-v2.csv
+
+# inside bongo_logs: track everything EXCEPT inventory_v2
+data/raw/bongo_logs/inventory_v2/
+
+# data/output: track only .csv and .rds (not the v2/ folder)
+data/output/*
+!data/output/*.csv
+!data/output/*.rds
