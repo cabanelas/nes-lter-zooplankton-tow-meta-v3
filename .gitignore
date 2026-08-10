@@ -1,7 +1,6 @@
 .Rhistory
 .RData
 .Rproj.user/
-*.Rproj
 
 # --- data/: ignore by default, then whitelist specific paths ---
 data/*
