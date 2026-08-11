@@ -1,3 +1,43 @@
 need to add HRS206, HRS2609, and AR105 files
 need to add info about size_frat_20 to csv files ?
 need to reformat dates in R script ?
+
+
+- add depth_PX column then compare with tdrdata output/compare depths
+- TDR and PX depth columns should be "fixed" correct ones for calculations  
+- compare entries with event logs
+-- 
+
+QA/QC
+- check TDR package; maybe add here a final QAQC script for checking everything 
+- check that vol sampled was correctly calculated
+- plot vol filtered by station 
+- also compare vol filtere between 2 flowmeters 
+- check that all NAs are R NA's
+- date range by cruise
+- unique per column
+- check comments 
+
+-- also maybe somewhere i can have event log csv and max sampling depth csv read in to cross check data 
+
+NEED FIX
+- AE2426 
+== some are px sensor depth but i think put in tdr max depth??? need to check 
+== L5 B5 - splits of the sample
+== L6    - splits of the sample 
+- EN727 
+== some are px sensor depth but i think put in tdr max depth??? need to check 
+
+- EN720 check ship speeds 
+- check the Y and N for the sample columns 
+
+- for V3 still need to confirm and add net_max_depth values 
+
+
+##  This is NOT the final v3 metadata; still needs:
+##                - TDR max depths
+##                - Haul factors
+##                - Primary/secondary flags
+##                - hrs2601, hrs2609, ar105 raw log sheets
+
+00_packages ??? 
