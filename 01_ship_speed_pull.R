@@ -1,5 +1,5 @@
 ################################################################################
-## Script:  01_ship_speed_data.R
+## Script:  01_ship_speed_pull.R
 ## Project: NES-LTER Zooplankton Inventory Data Package v3
 ## Author:  Alexandra C. Cabanelas
 ##
@@ -21,6 +21,8 @@
 # NOTE: AE2426 and HRS2601 have no through-water speed in the underway
 # only wind speed/GPS-derived SOG. speedlog_waterspeedfwd is NA for these 
 # STW-based volume unavailable for tows on these two cruises
+# EN720 (and all Endeavor cruises) report GPS-SOG in BOTH speedlog channels -
+# no true STW; speedlog_waterspeedfwd is treated as NA downstream (see script 02).
 
 ## ------------------------------------------ ##
 #            Packages -----
