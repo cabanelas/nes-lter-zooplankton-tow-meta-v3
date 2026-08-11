@@ -142,6 +142,10 @@ full_speed %>% filter(cruise == "EN720") %>% summarise(all_na = all(is.na(speedl
 # write_csv(merged_data, here("output", "shipspeed_eventlog_v3.csv"))
 
 
+#On R/V Endeavor cruises, the underway speedlog reports GPS-derived speed over ground in both the fore-aft water-speed and ground-speed channels; speed through water was not independently measured. STW and SOG are therefore identical for these cruises and reflect SOG only.
+##  MAY NEED TO WORK ON THIS NEXT... 
+
+
 ## ------------------------------------------ ##
 #            OLD STUFF TO CHECK -----
 ## ------------------------------------------ ##
