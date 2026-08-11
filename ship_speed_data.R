@@ -6,10 +6,17 @@
 ## Purpose: Get underway ship speed data from NES-LTER cruises via 
 ##           NES LTER REST API. Included in the underway data. 
 ##
-##  This adds data starting AE2426 (fall 2024)
-##        v2 had up to EN720
+##  cruises: EN720, AE2426, EN727, AR88, AR92, AR95, AR99, HRS2601
+##        v2 had up to EN720 (but ship speed wasnt available yet)
 ##
+## Inputs (data/raw/):
+##   - NES-LTER REST API underway data
+##      https://nes-lter-api.whoi.edu/api/underway/{cruise}.csv
+##
+## Outputs (data/processed/):
+##   - raw_ship_speed_underwayrestapi_YYYYMMDD.csv
 ################################################################################
+
 # OOI;no bongo, no ring: AR34A, AR22, AR24a, AR24c, AR28A, AR31C, AR39A, AR44, AR48A, AR48B
 # NOTE: AE2426 and HRS2601 have no through-water speed in the underway
 # only wind speed/GPS-derived SOG. speedlog_waterspeedfwd is NA for these 
@@ -22,6 +29,7 @@ library(here)
 library(dplyr)
 library(listviewer)
 library(purrr)
+library(readr)
 
 ## ------------------------------------------ ##
 #            Data -----
@@ -115,8 +123,7 @@ ship_speed %>%
 # NO ship speeds available for HRS2601
 
 ## --- Save csv --- ##
-write.csv(ship_speed,
-          here::here("data", "output", 
-                     paste0("raw_ship_speed_underwayrestapi_", 
-                            Sys.Date(), ".csv")),
-          row.names = FALSE)
+today <- format(Sys.Date(), "%Y%m%d")
+readr::write_csv(ship_speed,
+                 here::here("data", "processed",
+                            glue::glue("raw_ship_speed_underwayrestapi_{today}.csv")))
