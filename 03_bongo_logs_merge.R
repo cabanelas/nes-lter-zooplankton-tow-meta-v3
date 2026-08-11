@@ -1,5 +1,5 @@
 ################################################################################
-## Script:  01_merge_bongo_logs.R
+## Script:  03_bongo_logs_merge.R
 ## Project: NES-LTER Zooplankton Inventory Data Package v3
 ## Author:  Alexandra C. Cabanelas
 ##
