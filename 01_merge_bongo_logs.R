@@ -7,24 +7,21 @@
 ##          (2024-2026) with published v2 inventory metadata, producing
 ##          a combined dataset for v3 EDI package (2018-2026 cruises).
 ##
-##  This adds data starting AE2426 (fall 2024)
+##  This adds data from AE2426 (fall 2024)
 ##        v2 had up to EN720
 ##
-##  This is NOT the final v3 metadata; still needs:
-##                - TDR max depths
-##                - Haul factors
-##                - Primary/secondary flags
-##                - AR99, hrs2601, hrs2609 raw log sheets
-##
 ## Inputs (data/raw/):
-##   - bongo_logs/*.csv           (new cruise event log datasheets)
+##   - bongo_logs/*.csv                          (new cruise bongo logsheets)
 ##   - nes-lter-zooplankton-tow-metadata-v2.csv  (EDI: knb-lter-nes.24.2)
-##
+##   - px_data_bongo_2026-06-18.rds              (EDI:)
 ## Outputs (data/processed/):
-##   - all-nes-lter-bongologs-YYYYMMDD.csv / .rds
+##   - nes-lter-bongologs-{last_cruise}-YYYYMMDD.csv / .rds
 ##
 ## Ring net only (no bongo): AR31A, AR39B, AR34B, AR28B, AR66B, AR61B
 ## New columns added starting EN720: ship_speed_kts, EtOHchanged
+##
+## Separate bongo and ring net tows starting: AR99 (winter 2026)
+## PX sensor depth starting: AE2426 (fall 2024)
 ##
 ## v2 package downloaded: 07-NOV-2025
 #https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2
@@ -130,7 +127,7 @@ combined_dataframe <- combined_dataframe %>%
   ) %>%
   select(-date_parsed, -dateUTC_yymmdd, -time_start_UTC, -time_end_UTC)
 
-## --- 4) add columns present in tow_meta_v2 but missing here — fill with NA ---
+## --- 4) add columns present in tow_meta_v2 but missing here + fill with NA ---
 missing_cols <- setdiff(names(tow_meta_v2), names(combined_dataframe))
 message(glue::glue("Adding {length(missing_cols)} NA columns: {paste(missing_cols, collapse = ', ')}"))
 
@@ -170,10 +167,24 @@ combined_dataframe <- combined_dataframe %>%
                   tot_flow_counts_150, vol_filtered_150),
                 ~ if_else(.x == 0, NA_real_, .x)))
 
+## couple of no-sample rows (bad weather,etc) need to add NAs to fields
+# columns that can carry a value even on an otherwise-empty placeholder row
+id_cols <- c("cruise", "station", "sample_name",
+             "flowmeter_sn_335", "flowmeter_sn_150", "comments")
+
+# TRUE where every OTHER column is NA
+empty_row <- rowSums(!is.na(combined_dataframe[setdiff(names(combined_dataframe), id_cols)])) == 0
+sum(empty_row)         
+
+combined_dataframe <- combined_dataframe %>%
+  mutate(across(c(sample_name, flowmeter_sn_335, flowmeter_sn_150),
+                ~ if_else(empty_row, NA_character_, as.character(.))))
+
 ## ------------------------------------------ ##
 ##  check data
 ## ------------------------------------------ ##
-## --- cruise and station counts — expected ~12 per cruise ---
+## --- cruise and station counts ---
+# expected ~12 per cruise 
 combined_dataframe %>%
   count(cruise, sort = FALSE) 
 
@@ -183,7 +194,8 @@ combined_dataframe %>%
   summarise(stations = paste(sort(station), collapse = ", "),
             n = n(), .groups = "drop") 
 
-## --- tow duration — flag anything < 3 min or > 60 min ---
+## --- tow duration ---
+# flag anything < 3 min or > 60 min
 combined_dataframe %>%
   filter(!is.na(datetime_UTC_start), !is.na(datetime_UTC_end)) %>%
   mutate(
@@ -268,36 +280,89 @@ combined_dataframe %>%
   arrange(cruise, station) %>%
   print()
 
+lapply(combined_dataframe, unique)
+
 ## ------------------------------------------ ##
-##    Manually fix bad timestamps
+##    Fix col types 
+## ------------------------------------------ ##
+# combined_dataframe <- combined_dataframe %>%
+#   mutate(across(c(latitude_start, longitude_start, latitude_end, longitude_end,
+#                   depth_bottom, depth_target, depth_TDR, net_max_depth,
+#                   avg_angle, max_wire_out, wire_rate_out, wire_rate_in,
+#                   STW_start, SOG_start, STW_end, SOG_end,
+#                   flowmeter_sn_335, flowmeter_sn_150,
+#                   haul_factor_10m2_335, haul_factor_10m2_150,
+#                   haul_factor_100m3_335, haul_factor_100m3_150),
+#                 ~ suppressWarnings(as.numeric(.))))
+## Coerce to match tow_meta_v2 column types 
+num_cols <- c("latitude_start", "longitude_start", "latitude_end", "longitude_end",
+              "depth_bottom", "depth_target", "depth_TDR", "net_max_depth",
+              "avg_angle", "max_wire_out", "wire_rate_out", "wire_rate_in",
+              "STW_start", "SOG_start", "STW_end", "SOG_end",
+              "flowmeter_sn_335", "flowmeter_sn_150",
+              "haul_factor_10m2_335", "haul_factor_10m2_150",
+              "haul_factor_100m3_335", "haul_factor_100m3_150",
+              "primary_flag")
+
+chr_cols <- c("size_fract_20", "secondary_flag")  # v2 char, yours logi
+
+combined_dataframe <- combined_dataframe %>%
+  mutate(across(all_of(num_cols), ~ suppressWarnings(as.numeric(.))),
+         across(all_of(chr_cols), as.character))
+
+## ------------------------------------------ ##
+##    Manual fixes 
 ## ------------------------------------------ ##
 unique(combined_dataframe$cruise)
 
+# fix timestamps; depth_target
+
 #	AE2426_L5_B5; datetime_UTC_end should be = 2024-11-07 13:52:00 (incorrectly entered 2024-11-07 23:52:00)
-#	AE2426_L11_B9 = CTD was CAST 10
+#	AE2426_L11_B9 = CTD was CAST 10 = sample name is B10
 
 #	AR88_L6_B10; datetime_UTC_end should be = 2025-04-27 00:00:00 (incorrectly entered 2025-04-26 00:00:00)
+#	AR88_L3_B18 wire rate in should be 18
+
+# AR92_L1_B1 = latitude_start should be 41.193702
+# AR92_L3_B22 = morph_ID_150 should be Y  & wire_rate_in should be 16
+
+# AR99_L8_B20 = target depth == 133
 
 combined_dataframe <- combined_dataframe %>%
   mutate(
     datetime_UTC_end = case_when(
-      # AE2426 L5 B5 — end time was 23:52, should be 13:52
+      # AE2426 L5 B5 — end time entered 23:52, should be 13:52
       cruise == "AE2426" & station == "L5" & cast == "5" ~
         as.POSIXct("2024-11-07 13:52:00", tz = "UTC"),
-      # AR88 L6 B10 — end date was 2025-04-26, should be 2025-04-27
+      # AR88 L6 B10 — end date entered 2025-04-26, should be 2025-04-27
       cruise == "AR88" & station == "L6" & cast == "10" ~
         as.POSIXct("2025-04-27 00:00:00", tz = "UTC"),
       TRUE ~ datetime_UTC_end
     ),
     # fix depth target typo
     depth_target = case_when(
-      cruise == "AR99" & station == "L8" & cast == "20" ~ "133",
+      cruise == "AR99" & station == "L8" & cast == "20" ~ 133,
       TRUE ~ depth_target
+    ),
+    # fix wire rate in entries
+    wire_rate_in = case_when(
+      cruise == "AR88" & station == "L3" & cast == "18" ~ 18, # AR88 L3 B18; 18
+      cruise == "AR92" & station == "L3" & cast == "22" ~ 16, # AR92 L3 B22; 16
+      TRUE ~ wire_rate_in
+    ),
+    # AR92 L1 B1 — latitude_start should be 41.193702
+    latitude_start = case_when(
+      cruise == "AR92" & station == "L1" & cast == "1" ~ 41.193702,
+      TRUE ~ latitude_start
+    ),
+    # AR92 L3 B22 — morph_ID_150 should be Y
+    morph_ID_150 = case_when(
+      cruise == "AR92" & station == "L3" & cast == "22" ~ "Y",
+      TRUE ~ morph_ID_150
     )
   )
 
-## LATER MAY NEED TO CHECK AND ADD MORE
-
+# check tow duration 
 combined_dataframe %>%
   filter(!is.na(datetime_UTC_start), !is.na(datetime_UTC_end)) %>%
   mutate(
@@ -311,15 +376,9 @@ combined_dataframe %>%
   as.data.frame() %>%
   print()
 
-combined_dataframe <- combined_dataframe %>%
-  mutate(across(c(latitude_start, longitude_start, latitude_end, longitude_end,
-                  depth_bottom, depth_target, depth_TDR, net_max_depth,
-                  avg_angle, max_wire_out, wire_rate_out, wire_rate_in,
-                  STW_start, SOG_start, STW_end, SOG_end,
-                  flowmeter_sn_335, flowmeter_sn_150,
-                  haul_factor_10m2_335, haul_factor_10m2_150,
-                  haul_factor_100m3_335, haul_factor_100m3_150),
-                ~ suppressWarnings(as.numeric(.))))
+# confirm types still match v2 right 
+identical(sapply(combined_dataframe[names(tow_meta_v2)], \(x) class(x)[1]),
+          sapply(tow_meta_v2, \(x) class(x)[1]))   # should be TRUE
 
 ## ------------------------------------------ ##
 ##  Combine with tow_meta_v2
@@ -359,11 +418,80 @@ tow_meta_v3 %>%
   )
 
 ## ------------------------------------------ ##
+##  Add depth_PX column 
+## ------------------------------------------ ##
+px <- readRDS(here("data", "raw", "px_data_bongo_2026-06-18.rds"))
+
+glimpse(px)          # column names + types
+head(px, 20)
+#  # rows per cast
+px %>% count(cruise, station, cast) %>% arrange(desc(n)) %>% head()
+
+px_max <- px %>%
+  filter(!is.na(depth_m)) %>%                          
+  group_by(cruise, station, cast) %>%                
+  summarise(depth_PX = max(depth_m, na.rm = TRUE),     
+            .groups = "drop") %>%
+  mutate(cast = gsub("^[BR]", "", as.character(cast)))
+
+tow_meta_v3 <- tow_meta_v3 %>%
+  left_join(px_max, by = c("cruise", "station", "cast")) %>%
+  relocate(depth_PX, .after = depth_TDR)
+
+tow_meta_v3 %>%
+  filter(cruise %in% c("AE2426","EN727","AR88","AR92","AR95","AR99","HRS2601")) %>%
+  group_by(cruise) %>%
+  summarise(n = n(),
+            n_px = sum(!is.na(depth_PX)),
+            .groups = "drop")
+
+tow_meta_v3 %>%
+  filter(!is.na(depth_PX)) %>%
+  select(cruise, station, cast, depth_PX) %>%
+  arrange(cruise, station) %>%
+  print(n = Inf)
+
+## add missing depth_PX 
+# EN727 L9 = 200
+# AR99 L2 = 44 & L11 = 199
+# AR95 L6 = 91
+tow_meta_v3 <- tow_meta_v3 %>%
+  mutate(
+    depth_PX = case_when(
+      cruise == "EN727" & station == "L9"  ~ 200,
+      cruise == "AR99"  & station == "L2"  ~ 44,
+      cruise == "AR99"  & station == "L11" ~ 199,
+      cruise == "AR95"  & station == "L6"  ~ 91,
+      TRUE ~ depth_PX
+    )
+  )
+
+# AE2426 L2, L7, L8 TDR column were actually PX depths, need to fix to actual TDR
+# TDR DEPTHS FROM TDR DATA:
+# L2 19 = 33.5 
+# L7 15 = 104
+# L8 13 = 131  
+tow_meta_v3 <- tow_meta_v3 %>%
+  mutate(
+    depth_TDR = case_when(
+      cruise=="AE2426" & station=="L2" & cast=="19" ~ 33.5,
+      cruise=="AE2426" & station=="L7" & cast=="15" ~ 104,
+      cruise=="AE2426" & station=="L8" & cast=="13" ~ 131,
+      TRUE ~ depth_TDR
+    )
+  )
+
+## ------------------------------------------ ##
 #            Save -----
 ## ------------------------------------------ ##
-today <- format(Sys.Date(), "%Y%m%d")
+last_cruise <- tow_meta_v3 %>%
+  filter(!is.na(datetime_UTC_start)) %>%
+  slice_max(datetime_UTC_start, n = 1) %>%
+  pull(cruise)
 
-write_csv(tow_meta_v3, here("data", "output",
-                            glue::glue("all-nes-lter-bongologs-{today}.csv")))
-saveRDS(tow_meta_v3,   here("data", "output",
-                            glue::glue("all-nes-lter-bongologs-{today}.rds")))
+stamp <- glue::glue("{last_cruise}-{format(Sys.Date(), '%Y%m%d')}")
+
+write_csv(tow_meta_v3, here("data", "processed",
+                            glue::glue("nes-lter-bongologs-{stamp}.csv")))
+saveRDS(tow_meta_v3,   here("data", "processed",
+                            glue::glue("nes-lter-bongologs-{stamp}.rds")))
