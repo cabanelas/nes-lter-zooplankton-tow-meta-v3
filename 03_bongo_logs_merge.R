@@ -7,13 +7,16 @@
 ##          (2024-2026) with published v2 inventory metadata, producing
 ##          a combined dataset for v3 EDI package (2018-2026 cruises).
 ##
-##  This adds data from AE2426 (fall 2024)
+##  This adds data from AE2426 (fall 2024) to CRUISENAME
 ##        v2 had up to EN720
 ##
 ## Inputs (data/raw/):
 ##   - bongo_logs/*.csv                          (new cruise bongo logsheets)
 ##   - nes-lter-zooplankton-tow-metadata-v2.csv  (EDI: knb-lter-nes.24.2)
 ##   - px_data_bongo_2026-06-18.rds              (EDI:)
+##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv (nes-lter-api-pulls.Rproj)
+##   - tdr_data_no_offset_2026-08-11.rds         (EDI:)
+##
 ## Outputs (data/processed/):
 ##   - nes-lter-bongologs-{last_cruise}-YYYYMMDD.csv / .rds
 ##
@@ -222,6 +225,7 @@ if (nrow(neg_dur) > 0) {
 } else {
   message("No negative durations")
 }
+# ar88 fixed below 
 
 # long tows > 60 min
 long_tows <- combined_dataframe %>%
@@ -304,7 +308,7 @@ num_cols <- c("latitude_start", "longitude_start", "latitude_end", "longitude_en
               "haul_factor_100m3_335", "haul_factor_100m3_150",
               "primary_flag")
 
-chr_cols <- c("size_fract_20", "secondary_flag")  # v2 char, yours logi
+chr_cols <- c("size_fract_20", "secondary_flag") 
 
 combined_dataframe <- combined_dataframe %>%
   mutate(across(all_of(num_cols), ~ suppressWarnings(as.numeric(.))),
@@ -381,13 +385,78 @@ identical(sapply(combined_dataframe[names(tow_meta_v2)], \(x) class(x)[1]),
           sapply(tow_meta_v2, \(x) class(x)[1]))   # should be TRUE
 
 ## ------------------------------------------ ##
+##  AR99+ separate ring-net tows (from elog) 
+## ------------------------------------------ ##
+# Starting AR99, the 20-um ring net deploys SEPARATELY from the bongo (its own
+# tow, own timestamp)
+# These are in the event log, not the bongo logsheets.
+# position + time + (TDR depth) only;
+# non-quantitative (no flowmeter), so volume/haul stay NA.
+
+# from nes-lter-api-pulls.Rproj download 10-AUG-2026
+event_log <- read_csv(here("data", "raw",
+                           "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
+
+ring_cruises <- c("AR99") #hrs2601
+
+ring_tows <- event_log %>%
+  filter(cruise %in% ring_cruises, grepl("^R", cast)) %>%
+  # collapse deploy/recover into one row per tow
+  group_by(cruise, station, cast) %>%
+  summarise(
+    datetime_UTC_start = min(datetime8601[action == "deploy"],  na.rm = TRUE),
+    datetime_UTC_end   = max(datetime8601[action == "recover"], na.rm = TRUE),
+    latitude_start     = first(latitude[action == "deploy"]),
+    longitude_start    = first(longitude[action == "deploy"]),
+    latitude_end       = first(latitude[action == "recover"]),
+    longitude_end      = first(longitude[action == "recover"]),
+    comments           = first(na.omit(comment)),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    sample_name = paste0(cruise, "_", station, "_", cast),  # AR99_L2_R3
+    comments    = "Standalone vertical ring-net tow separate from bongo."
+  ) %>%
+  mutate(cast = gsub("^R", "", cast))   # "R3" -> "3", matches bongo cast
+
+# add the v2 columns this doesn't have, fill NA, match order
+ring_missing <- setdiff(names(tow_meta_v2), names(ring_tows))
+ring_tows[ring_missing] <- NA
+ring_tows <- ring_tows %>% select(all_of(names(tow_meta_v2)))
+
+# coerce types to match (same num_cols as the bongo rows)
+ring_tows <- ring_tows %>%
+  mutate(across(any_of(num_cols), ~ suppressWarnings(as.numeric(.))),
+         across(any_of(chr_cols), as.character))
+
+## ------------------------------------------ ##
+##  AR99 ring-net TDR depth 
+## ------------------------------------------ ##
+
+## --- TDR depth from nes-lter-tdr-bongo.Rproj --- ##
+tdr <- readRDS(here("data", "raw", "tdr_data_no_offset_2026-08-11.rds"))
+
+# max TDR depth for the standalone ring tows (depth_TDR is NA for them from elog)
+tdr_ring_max <- tdr %>%
+  filter(cruise == "AR99", grepl("^R", cast)) %>%   # ring casts only
+  filter(!is.na(depth_m)) %>%                        
+  group_by(cruise, station, cast) %>%
+  summarise(depth_TDR_ring = max(depth_m, na.rm = TRUE), .groups = "drop") %>%
+  mutate(cast = gsub("^R", "", cast))                # match stripped cast key
+
+ring_tows <- ring_tows %>%
+  left_join(tdr_ring_max, by = c("cruise", "station", "cast")) %>%
+  mutate(depth_TDR = coalesce(depth_TDR, depth_TDR_ring)) %>%
+  select(-depth_TDR_ring)
+
+## ------------------------------------------ ##
 ##  Combine with tow_meta_v2
 ## ------------------------------------------ ##
 
 # confirm column names match before binding
 identical(names(combined_dataframe), names(tow_meta_v2))
 
-tow_meta_v3 <- bind_rows(tow_meta_v2, combined_dataframe) %>%
+tow_meta_v3 <- bind_rows(tow_meta_v2, combined_dataframe, ring_tows) %>%
   arrange(datetime_UTC_start)
 
 message(glue::glue("tow_meta_v2: {nrow(tow_meta_v2)} rows"))
@@ -404,6 +473,7 @@ tow_meta_v3 %>%
 tow_meta_v3 %>%
   count(cruise, station, cast) %>%
   filter(n > 1)
+# expected for ar99 due to separate ring net tow
 
 # date range makes sense
 range(tow_meta_v3$datetime_UTC_start, na.rm = TRUE)
@@ -416,6 +486,119 @@ tow_meta_v3 %>%
     n_na       = sum(is.na(depth_target)),
     n_over_200 = sum(depth_target > 200, na.rm = TRUE)
   )
+
+## ------------------------------------------ ##
+##  Add net_type column
+## ------------------------------------------ ##
+# bongo = bongo-frame deployment (335 + 150 nets; historically frame-mounted ring)
+# ring  = standalone ring-net tow (old + AR99+ separate)
+# distinguished by sample name: R = ring, B = bongo
+tow_meta_v3 <- tow_meta_v3 %>%
+  mutate(
+    net_type = case_when(
+      grepl("_R\\d+[A-Z]?$", sample_name) ~ "ring",
+      grepl("_B\\d+[A-Z]?$", sample_name) ~ "bongo",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  relocate(net_type, .after = sample_name)
+
+## --- remove NON-tow entries --- ##
+# 2 rows from AE2426 couldnt sample too rough
+tow_meta_v3 <- tow_meta_v3 %>% filter(!is.na(sample_name))
+
+## ------------------------------------------ ##
+##  Check coordinates: logsheet/v2 vs elog START coords (all cruises) 
+## ------------------------------------------ ##
+elog_start_coords <- event_log %>%
+  filter(action == "deploy") %>%
+  mutate(net_type = if_else(grepl("^R", cast), "ring", "bongo")) %>%  
+  group_by(cruise, station, cast, net_type) %>%
+  summarise(lat_start_elog = first(latitude),
+            lon_start_elog = first(longitude), .groups = "drop") %>%
+  mutate(cast = gsub("^[BR]", "", cast))  # strip B or R to match metadata
+
+start_check <- tow_meta_v3 %>%
+  select(cruise, station, cast, sample_name, net_type,
+         latitude_start, longitude_start) %>%
+  left_join(elog_start_coords, 
+            by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    lat_diff = latitude_start  - lat_start_elog,
+    lon_diff = longitude_start - lon_start_elog,
+    dist_m = sqrt((lat_diff * 111000)^2 +
+                    (lon_diff * 111000 * cos(latitude_start * pi/180))^2)
+  )
+
+start_check %>%
+  summarise(n_compared = sum(!is.na(dist_m)),
+            n_no_elog   = sum(is.na(dist_m)),
+            max_dist_m  = max(dist_m, na.rm = TRUE),
+            mean_dist_m = mean(dist_m, na.rm = TRUE),
+            n_over_500m = sum(dist_m > 500, na.rm = TRUE))
+
+start_check %>%
+  filter(dist_m > 500) %>%
+  arrange(desc(dist_m)) %>%
+  select(cruise, station, cast, latitude_start, lat_start_elog,
+         longitude_start, lon_start_elog, dist_m) %>%
+  print(n = Inf)
+
+## --- fix bad coordinates in logsheet --- ##
+# AR38   L6 use elog lat and lon starts
+# AE2426 L2 use elog latitude_start  
+# AR92   L6 use elog latitude_start
+# AR95   MVCO use elog longitude_start
+# AR95   L6 use elog longitude_start
+# all bongo
+
+tow_meta_v3 <- tow_meta_v3 %>%
+  left_join(elog_start_coords %>%
+              select(cruise, station, cast, net_type, lat_start_elog, lon_start_elog),
+            by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    # AR38 L6: both coordinates
+    latitude_start = if_else(cruise == "AR38" & station == "L6",
+                             lat_start_elog, latitude_start),
+    longitude_start = if_else(cruise == "AR38" & station == "L6",
+                              lon_start_elog, longitude_start),
+    # latitude-only fixes
+    latitude_start = if_else(
+      (cruise == "AE2426" & station == "L2") |
+        (cruise == "AR92"   & station == "L6"),
+      lat_start_elog, latitude_start),
+    # longitude-only fixes
+    longitude_start = if_else(
+      (cruise == "AR95" & station == "MVCO") |
+        (cruise == "AR95" & station == "L6"),
+      lon_start_elog, longitude_start)
+  ) %>%
+  select(-lat_start_elog, -lon_start_elog)
+
+## ------------------------------------------ ##
+##  End coordinates for new-cruise bongo tows (from elog) 
+## ------------------------------------------ ##
+# Logsheets carry only START coordinates
+# END coords (recover) are in the elog
+# Pull recover lat/lon per bongo tow and fill latitude_end/longitude_end.
+# v2 rows already have end coords - coalesce keeps them, fills only NAs
+
+elog_end_coords <- event_log %>%
+  filter(action == "recover") %>%
+  mutate(net_type = if_else(grepl("^R", cast), "ring", "bongo")) %>%
+  group_by(cruise, station, cast, net_type) %>%
+  summarise(latitude_end_elog  = first(latitude),
+            longitude_end_elog = first(longitude), .groups = "drop") %>%
+  mutate(cast = gsub("^[BR]", "", cast))
+
+tow_meta_v3 <- tow_meta_v3 %>%
+  left_join(elog_end_coords, by = c("cruise", "station", "cast", "net_type"),
+            suffix = c("", "_j")) %>%
+  mutate(
+    latitude_end  = coalesce(latitude_end,  latitude_end_elog),
+    longitude_end = coalesce(longitude_end, longitude_end_elog)
+  ) %>%
+  select(-latitude_end_elog, -longitude_end_elog)
 
 ## ------------------------------------------ ##
 ##  Add depth_PX column 
@@ -477,6 +660,9 @@ tow_meta_v3 <- tow_meta_v3 %>%
       cruise=="AE2426" & station=="L2" & cast=="19" ~ 33.5,
       cruise=="AE2426" & station=="L7" & cast=="15" ~ 104,
       cruise=="AE2426" & station=="L8" & cast=="13" ~ 131,
+      # I found the TDR file for EN657 L1 (it was nested in another file cast)
+      # in v2 Net max depth was calculated based on wire information (cosine law)
+      cruise=="EN657"  & station=="L1" & cast=="1"  ~ 15.78,
       TRUE ~ depth_TDR
     )
   )
