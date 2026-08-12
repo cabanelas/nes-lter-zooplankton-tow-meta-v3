@@ -13,6 +13,9 @@ data/raw/*
 !data/raw/all_eventLogs_26SEP2024.csv
 !data/raw/max_depth_tdr_corrected.csv
 !data/raw/nes-lter-zooplankton-tow-metadata-v2.csv
+!data/raw/nes-lter-bongo-tdr-offsets.csv
+!data/raw/elog_zoop_tows_thruHRS2601_2026-08-10.csv
+!data/raw/shipspeed_eventlog_v2.csv
 
 # inside bongo_logs: track everything EXCEPT inventory_v2
 data/raw/bongo_logs/inventory_v2/
