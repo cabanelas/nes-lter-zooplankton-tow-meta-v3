@@ -19,5 +19,4 @@ data/raw/bongo_logs/inventory_v2/
 
 # data/processed: track only .csv and .rds (not the v2/ folder)
 data/processed/*
-!data/processed/*.csv
-!data/processed/*.rds
+!data/processed/README.md
