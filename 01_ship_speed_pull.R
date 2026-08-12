@@ -129,3 +129,7 @@ today <- format(Sys.Date(), "%Y%m%d")
 readr::write_csv(ship_speed,
                  here::here("data", "processed",
                             glue::glue("raw_ship_speed_underwayrestapi_{today}.csv")))
+
+################################################################################
+# go to -----------> 02_ship_speed_eventlog_merge.R
+################################################################################
