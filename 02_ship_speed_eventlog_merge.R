@@ -31,8 +31,14 @@ library(lubridate)
 #                                  "raw_ship_speed_underwayrestapi_28SEP24.csv")) %>%
 #   select(-X)
 #created in ship_speed_data.R (ship speeds downloaded from rest api)
-ship_speed <- read_csv(here("data", "processed",
-                            "raw_ship_speed_underwayrestapi_20260810.csv"))
+
+# this grabs the most recent file 
+latest_ship_speed <- sort(list.files(
+  here("data", "processed"),
+  pattern = "^raw_ship_speed_underwayrestapi_\\d{8}\\.csv$",
+  full.names = TRUE)) %>% tail(1)
+
+ship_speed <- read_csv(latest_ship_speed)
 
 ## --- EVENT LOG DATA --- ##
 # event_log_old <- read.csv(file.path("data/raw",
@@ -197,3 +203,7 @@ full_speed %>% distinct(cruise) %>% arrange(cruise) %>% pull()
 #            Write ----
 ## ------------------------------------------ ##
 write_csv(full_speed, here("data", "processed", "shipspeed_eventlog_v3.csv"))
+
+################################################################################
+# go to -----------> 03_bongo_logs_merge.R
+################################################################################
