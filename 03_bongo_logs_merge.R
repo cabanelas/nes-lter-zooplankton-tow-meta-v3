@@ -433,6 +433,8 @@ ring_tows <- ring_tows %>%
 ##  AR99 ring-net TDR depth 
 ## ------------------------------------------ ##
 
+### MAYBE USE THE nes-lter-bongo-tdr-offsets
+# but i need to rerun tdr pipeline and reexport 
 ## --- TDR depth from nes-lter-tdr-bongo.Rproj --- ##
 tdr <- readRDS(here("data", "raw", "tdr_data_no_offset_2026-08-11.rds"))
 
