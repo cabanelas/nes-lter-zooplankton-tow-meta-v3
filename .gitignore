@@ -5,7 +5,7 @@
 # --- data/: ignore by default, then whitelist specific paths ---
 data/*
 !data/raw/
-!data/output/
+!data/processed/
 
 # data/raw: ignore its contents, then re-include specific files + bongo_logs
 data/raw/*
@@ -17,7 +17,7 @@ data/raw/*
 # inside bongo_logs: track everything EXCEPT inventory_v2
 data/raw/bongo_logs/inventory_v2/
 
-# data/output: track only .csv and .rds (not the v2/ folder)
-data/output/*
-!data/output/*.csv
-!data/output/*.rds
+# data/processed: track only .csv and .rds (not the v2/ folder)
+data/processed/*
+!data/processed/*.csv
+!data/processed/*.rds
