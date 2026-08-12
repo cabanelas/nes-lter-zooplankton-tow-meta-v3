@@ -1,6 +1,5 @@
 need to add HRS2601, HRS2609, and AR105 files
 need to add info about size_frat_20 to csv files ?
-need to reformat dates in R script ?
 
 To-Do:
 
@@ -8,21 +7,16 @@ To-Do:
 - in 03 need to go back and check coordinate differences between elog and logshetet
 - check 
 
-
-- compare with tdrdata output/compare depths
-- TDR and PX depth columns should be "fixed" correct ones for calculations  -- check that that is the case by comparing with TDR data and values in the scrpt
 - compare entries with event logs
-
 - need a new ring_net_20 col?
 - winch data post hrs2303?
-- check TDR script QAQC to make similar one for the output here.. 
 - renv
 - readme update with script ordering and tree 
-- need to ensure i did coss checks of data for new cruises between logsheet; event log; tdr etc
-- export col file like i did with tdr data
+- coss checks of data for new cruises between logsheet; event log; tdr etc
 
 QA/QC
 - check TDR package; maybe add here a final QAQC script for checking everything 
+- export col file like i did with tdr data
 - check that vol sampled was correctly calculated
 - plot vol filtered by station 
 - also compare vol filtere between 2 flowmeters 
@@ -30,6 +24,7 @@ QA/QC
 - date range by cruise
 - unique per column
 - check comments 
+- need to reformat dates?
 
 -- also maybe somewhere i can have event log csv and max sampling depth csv read in to cross check data 
 
@@ -44,12 +39,8 @@ NEED FIX
 - EN720 
 - check the Y and N for the sample columns 
 
---flowmeter values 150 net during AR95 and AR99
-
-- for V3 still need to confirm and add net_max_depth values 
+- flowmeter values 150 net during AR95 and AR99
 - need to add QAQC to the inventory csv
-
 - Haul factors
 - Primary/secondary flags
-
-00_packages ??? 
+- 00_packages ??? 
