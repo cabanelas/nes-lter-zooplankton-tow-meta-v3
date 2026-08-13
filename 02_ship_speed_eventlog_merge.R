@@ -7,12 +7,14 @@
 ##          event log for the v3 EDI package (2018-2026 cruises, thru HRS2601)
 ##
 ## Inputs (data/):
-##   - processed/raw_ship_speed_underwayrestapi_20260810.csv  (01_ship_speed_data.R)
-##   - raw/elog_zoop_tows_thruHRS2601_2026-08-10.csv          (nes-lter-api-pulls.Rproj)
+##   - processed/raw_ship_speed_underwayrestapi_20260810.csv (01_ship_speed_pull.R)
+##   - raw/elog_zoop_tows_thruHRS2601_2026-08-10.csv         (nes-lter-api-pulls.Rproj)
+##          https://github.com/cabanelas/nes-lter-api-pulls
+##
 ## Outputs (output/):
 ##   - shipspeed_eventlog_v3.csv
 ##
-## Speeds kept: fwd only (STW/SOG); trans dropped
+## Speeds: fwd only (STW/SOG); trans dropped
 ################################################################################
 
 ## ------------------------------------------ ##
@@ -27,11 +29,7 @@ library(lubridate)
 ## ------------------------------------------ ##
 
 ## --- SHIP SPEED DATA --- ##
-# ship_speed_old <- read.csv(file.path("data/processed",
-#                                  "raw_ship_speed_underwayrestapi_28SEP24.csv")) %>%
-#   select(-X)
-#created in ship_speed_data.R (ship speeds downloaded from rest api)
-
+#created in 01_ship_speed_pull.R (ship speeds downloaded from rest api)
 # this grabs the most recent file 
 latest_ship_speed <- sort(list.files(
   here("data", "processed"),
@@ -41,8 +39,6 @@ latest_ship_speed <- sort(list.files(
 ship_speed <- read_csv(latest_ship_speed)
 
 ## --- EVENT LOG DATA --- ##
-# event_log_old <- read.csv(file.path("data/raw",
-#                                 "all_eventLogs_26SEP2024.csv"))
 # from nes-lter-api-pulls.Rproj download 10-AUG-2026
 event_log <- read_csv(here("data", "raw", 
                            "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
@@ -149,7 +145,8 @@ full_speed <- full_speed %>%
       "NA_endeavor_sog_only", speedlog_waterspeedfwd_source),
     speedlog_waterspeedfwd = if_else(cruise %in% endeavor, NA_real_, speedlog_waterspeedfwd)
   )
-# AR + AT46 = real STW (channels diverge) -> untouched. HRS/AE = no STW channel.
+# AR + AT46 = real STW = untouched
+# HRS/AE    = no STW 
 
 ## --- add source col to v2 speeds ---
 # it didnt have it
