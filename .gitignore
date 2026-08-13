@@ -10,7 +10,6 @@ data/*
 # data/raw: ignore its contents, then re-include specific files + bongo_logs
 data/raw/*
 !data/raw/bongo_logs/
-!data/raw/all_eventLogs_26SEP2024.csv
 !data/raw/max_depth_tdr_corrected.csv
 !data/raw/nes-lter-zooplankton-tow-metadata-v2.csv
 !data/raw/nes-lter-bongo-tdr-offsets.csv
