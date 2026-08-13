@@ -25,6 +25,7 @@ QA/QC
 - unique per column
 - check comments 
 - need to reformat dates?
+- can bring in v2 columns to check names/order goal
 
 -- also maybe somewhere i can have event log csv and max sampling depth csv read in to cross check data 
 

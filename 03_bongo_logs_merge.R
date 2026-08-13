@@ -13,9 +13,11 @@
 ## Inputs (data/raw/):
 ##   - bongo_logs/*.csv                          (new cruise bongo logsheets)
 ##   - nes-lter-zooplankton-tow-metadata-v2.csv  (EDI: knb-lter-nes.24.2)
-##   - px_data_bongo_2026-06-18.rds              (EDI:)
 ##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv (nes-lter-api-pulls.Rproj)
+##          https://github.com/cabanelas/nes-lter-api-pulls
 ##   - tdr_data_no_offset_2026-08-11.rds         (EDI:)
+##   - px_data_bongo_2026-06-18.rds              (EDI:)
+##          https://github.com/cabanelas/nes-lter-tdr-bongo
 ##
 ## Outputs (data/processed/):
 ##   - nes-lter-bongologs-{last_cruise}-YYYYMMDD.csv / .rds
@@ -27,7 +29,7 @@
 ## PX sensor depth starting: AE2426 (fall 2024)
 ##
 ## v2 package downloaded: 07-NOV-2025
-#https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2
+#  https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2
 ## created JUN-2024 | updated MAY-2026
 ################################################################################
 
@@ -170,6 +172,10 @@ combined_dataframe <- combined_dataframe %>%
                   tot_flow_counts_150, vol_filtered_150),
                 ~ if_else(.x == 0, NA_real_, .x)))
 
+## --- remove NON-tow entries --- ##
+# 2 rows from AE2426 couldnt sample too rough
+
+# i first changed the entries to NAs... 
 ## couple of no-sample rows (bad weather,etc) need to add NAs to fields
 # columns that can carry a value even on an otherwise-empty placeholder row
 id_cols <- c("cruise", "station", "sample_name",
@@ -182,6 +188,8 @@ sum(empty_row)
 combined_dataframe <- combined_dataframe %>%
   mutate(across(c(sample_name, flowmeter_sn_335, flowmeter_sn_150),
                 ~ if_else(empty_row, NA_character_, as.character(.))))
+
+combined_dataframe <- combined_dataframe %>% filter(!is.na(sample_name))
 
 ## ------------------------------------------ ##
 ##  check data
@@ -243,6 +251,7 @@ if (nrow(long_tows) > 0) {
 } else {
   message("No suspiciously long tows")
 }
+#ae2426 fixed below
 
 # missing datetimes
 combined_dataframe %>%
@@ -261,7 +270,7 @@ combined_dataframe %>%
   filter(xor(is.na(datetime_UTC_start), is.na(datetime_UTC_end))) %>%
   select(cruise, station, cast, datetime_UTC_start, datetime_UTC_end)
 
-# depth checks
+# NEED TO MOVE THIS DOWN -- depth checks
 combined_dataframe %>%
   filter(!is.na(net_max_depth)) %>%
   group_by(cruise) %>%
@@ -273,7 +282,6 @@ combined_dataframe %>%
 
 # station name check 
 sort(unique(combined_dataframe$station))
-
 # cast number check 
 sort(unique(combined_dataframe$cast))
 
@@ -281,23 +289,13 @@ sort(unique(combined_dataframe$cast))
 combined_dataframe %>%
   select(cruise, station, cast, datetime_UTC_start, datetime_UTC_end,
          latitude_start, longitude_start, net_max_depth) %>%
-  arrange(cruise, station) %>%
-  print()
+  arrange(cruise, station) 
 
 lapply(combined_dataframe, unique)
 
 ## ------------------------------------------ ##
 ##    Fix col types 
 ## ------------------------------------------ ##
-# combined_dataframe <- combined_dataframe %>%
-#   mutate(across(c(latitude_start, longitude_start, latitude_end, longitude_end,
-#                   depth_bottom, depth_target, depth_TDR, net_max_depth,
-#                   avg_angle, max_wire_out, wire_rate_out, wire_rate_in,
-#                   STW_start, SOG_start, STW_end, SOG_end,
-#                   flowmeter_sn_335, flowmeter_sn_150,
-#                   haul_factor_10m2_335, haul_factor_10m2_150,
-#                   haul_factor_100m3_335, haul_factor_100m3_150),
-#                 ~ suppressWarnings(as.numeric(.))))
 ## Coerce to match tow_meta_v2 column types 
 num_cols <- c("latitude_start", "longitude_start", "latitude_end", "longitude_end",
               "depth_bottom", "depth_target", "depth_TDR", "net_max_depth",
@@ -317,6 +315,8 @@ combined_dataframe <- combined_dataframe %>%
 ## ------------------------------------------ ##
 ##    Manual fixes 
 ## ------------------------------------------ ##
+# fixing some data entry errors 
+
 unique(combined_dataframe$cruise)
 
 # fix timestamps; depth_target
@@ -385,11 +385,10 @@ identical(sapply(combined_dataframe[names(tow_meta_v2)], \(x) class(x)[1]),
           sapply(tow_meta_v2, \(x) class(x)[1]))   # should be TRUE
 
 ## ------------------------------------------ ##
-##  AR99+ separate ring-net tows (from elog) 
+##  add AR99+ separate ring-net tows (from elog) 
 ## ------------------------------------------ ##
-# Starting AR99, the 20-um ring net deploys SEPARATELY from the bongo (its own
-# tow, own timestamp)
-# These are in the event log, not the bongo logsheets.
+# Starting AR99, the 20-um ring net is deployed SEPARATELY from the bongo
+# These are in the event log, but not entered in the bongo spreadsheet.
 # position + time + (TDR depth) only;
 # non-quantitative (no flowmeter), so volume/haul stay NA.
 
@@ -430,6 +429,12 @@ ring_tows <- ring_tows %>%
          across(any_of(chr_cols), as.character))
 
 ## ------------------------------------------ ##
+##    Fill in columns
+## ------------------------------------------ ##
+missing_cols  ## NOT SURE WHERE TO HAVE THIS MAY BE NICE TO HAVE IN ORDER 
+# like column fixing in the order showing in missing_cols? 
+
+## ------------------------------------------ ##
 ##  AR99 ring-net TDR depth 
 ## ------------------------------------------ ##
 
@@ -437,6 +442,7 @@ ring_tows <- ring_tows %>%
 # but i need to rerun tdr pipeline and reexport 
 ## --- TDR depth from nes-lter-tdr-bongo.Rproj --- ##
 tdr <- readRDS(here("data", "raw", "tdr_data_no_offset_2026-08-11.rds"))
+
 
 # max TDR depth for the standalone ring tows (depth_TDR is NA for them from elog)
 tdr_ring_max <- tdr %>%
@@ -504,10 +510,6 @@ tow_meta_v3 <- tow_meta_v3 %>%
     )
   ) %>%
   relocate(net_type, .after = sample_name)
-
-## --- remove NON-tow entries --- ##
-# 2 rows from AE2426 couldnt sample too rough
-tow_meta_v3 <- tow_meta_v3 %>% filter(!is.na(sample_name))
 
 ## ------------------------------------------ ##
 ##  Check coordinates: logsheet/v2 vs elog START coords (all cruises) 
