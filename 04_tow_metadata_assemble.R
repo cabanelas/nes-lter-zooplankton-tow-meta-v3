@@ -1,0 +1,582 @@
+################################################################################
+## Script:  04_tow_metadata_assemble.R
+## Project: NES-LTER Zooplankton Inventory Data Package v3
+## Author:  Alexandra C. Cabanelas
+##
+## Purpose: Fill every column that has NA from 03 script for the NEW v3 cruises, 
+##          and produce the final combined tow-metadata table (2018-2026).
+##          v2 (older version) rows already carry all derived columns from the
+##          published package and are left mostly untouched here; this script mainly
+##          fills the columns that came in NA for the new cruises. couple exceptions
+##          when a fix was needed
+##
+##    1. coordinates   (end from elog; fixed a few start coords)
+##    2. depths        (depth_TDR corrected + depth_PX, incl. AR99 ring)
+##    3. net_max_depth (coalesce corrected_TDR / PX / cosine / target)
+##    4. speeds        (STW/SOG, deploy+recover from script 02)
+##    5. volume        (keep flowmeter; fallback V=A*T*S where flowmeter == NA)
+##    6. haul factors
+##    7. data flags
+## size fract col** [ideally should come after speeds]
+##
+## Inputs (data/):
+##  (data/processed/):
+##   - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
+##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
+##  (data/raw/):
+##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv     (nes-lter-api-pulls)
+##          https://github.com/cabanelas/nes-lter-api-pulls
+##   - px_data_bongo_2026-06-18.rds                  (nes-lter-tdr-bongo)
+##   - tdr_data_no_offset_2026-08-11.rds             (nes-lter-tdr-bongo)
+##          https://github.com/cabanelas/nes-lter-tdr-bongo
+## ^ CHECK
+##
+## Outputs (data/processed/):
+##   - nes-lter-zooplankton-tow-metadata-v3-YYYYMMDD.csv
+################################################################################
+#
+# =============================================================================
+# ***  FLOWMETER VOLUME FACTOR   ***
+# -----------------------------------------------------------------------------
+# The published v2 volumes AND the new-cruise logsheet volumes were BOTH verified
+# (Aug 2026) to use this formula:
+#
+#     vol_filtered_m3 = tot_flow_counts * 0.026873 * A         (single-step form)
+#                     = (tot_flow_counts / 10) * 0.26873 * A   (identical value)
+#   where A = pi * (0.61/2)^2 = 0.2922 m^2  (61-cm bongo mouth area)
+#
+# The "0.26873 with counts/10" written in the old v2 scripts is NOT a bug: the
+# /10 == 0.026873 with raw counts. Both reproduce published volumes exactly.
+# checked cell-by-cell against knb-lter-nes.24.2 and AE2426/EN727/AR88/AR92 logsheets
+#
+#   >>> DO NOT combine (counts/10) WITH 0.026873 <<<  that is 10x too small.
+#
+# Flowmeter volumes here are KEPT as recorded; this script only computes the
+# A*T*S fallback where a flowmeter volume is missing. So this factor is not
+# re-applied below - it is documented for provenance.
+# tot_flow_counts is RAW counter revolutions (final reading - initial reading).
+# Published abundances used volumes from the tow-metadata CSV, so they inherit
+# this (correct) formula - they do NOT need republishing.
+# =============================================================================
+
+## ------------------------------------------ ##
+#            Packages -----
+## ------------------------------------------ ##
+library(here)
+library(tidyverse)
+library(lubridate)
+
+## ------------------------------------------ ##
+#            Constants / switches -----
+## ------------------------------------------ ##
+#FLOW_FACTOR <- 0.026873               # m per revolution 
+NET_DIAM_M   <- 0.61                    # 61-cm bongo mouth
+A_MOUTH      <- pi * (NET_DIAM_M/2)^2   # 0.2922 m^2
+KT_TO_MS     <- 0.514444                # knots -> m/s
+DEFAULT_SPEED_MS <- 1.5                 # last-resort tow speed if STW & SOG all NA
+
+# new v3 cruises that need derived columns filled (v2 rows preserved)
+new_cruises <- c("AE2426", "EN727", "AR88", "AR92", "AR95", "AR99", "HRS2601")
+
+# TRUE  = offset-correct depth_TDR for ALL cruises (v2 included); deliberate v2 edit
+# FALSE = only new cruises get corrected depth_TDR; v2 depth_TDR left as published.
+CORRECT_V2_DEPTH_TDR <- TRUE
+
+## helper: derive net_type from a B/R cast prefix, used to key joins so an AR99
+## bongo cast and ring cast at the same station can't collide after the strip.
+net_type_from_cast <- function(cast) if_else(grepl("^R", cast), "ring", "bongo")
+strip_BR           <- function(cast) gsub("^[BR]", "", as.character(cast))
+
+## ------------------------------------------ ##
+#            Data -----
+## ------------------------------------------ ##
+
+## --- merged tow metadata from 03 (latest saved .rds) --- ##
+files <- list.files(here("data", "processed"),
+                    pattern = "^tow-meta-v3-intermediate-.*\\.rds$", 
+                    full.names = TRUE)
+dates <- as.Date(str_extract(basename(files), "\\d{8}"), "%Y%m%d")
+latest_bongolog <- files[which.max(dates)]
+message("Reading tow metadata: ", basename(latest_bongolog))
+tow_meta <- readRDS(latest_bongolog)
+
+## --- event log (for coordinates) --- ##
+event_log <- read_csv(here("data", "raw",
+                           "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
+
+## --- PX + TDR --- ##
+px  <- readRDS(here("data", "raw", "px_data_bongo_2026-06-18.rds"))
+
+# tdr_offset <- read_csv(here("data", "raw", "tdr_offsets.csv"))
+## get new one make sure it has AE2426 L9 B12 85.6
+tdr <- read_csv(here("data", "raw", "nes-lter-bongo-tdr-offsets.csv"))
+## ^ maybe can use this too for px depth and no need for px data either
+
+## --- ship speed from script 02_ship_speed_eventlog_merge.R --- ##
+ship_speed <- read_csv(here("data", "processed", "shipspeed_eventlog_v3.csv"))
+
+# columns that are entirely NA across the new-cruise rows
+tow_meta %>%
+  filter(cruise %in% new_cruises, net_type != "ring") %>%
+  summarise(across(everything(), ~ all(is.na(.)))) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "all_na") %>%
+  filter(all_na) %>%
+  mutate(pos = match(column, names(tow_meta))) %>%
+  arrange(pos) %>%
+  pull(column)
+
+## ========================================================================== ##
+## 1) COORDINATES 
+## ========================================================================== ##
+# Logsheets have START coords; END (recover) coords come from the elog
+# coalesce() fills only NA ends -> v2 end coords preserved
+# A few START coords are known-bad in the logsheet and are set from the elog.
+
+## ------------------------------------------ ##
+##  End coordinates for new-cruise bongo tows (from elog) 
+## ------------------------------------------ ##
+## --- latitude_end & longitude_end   --- ##
+## --- end coords (recover) from elog --- ##
+elog_end_coords <- event_log %>%
+  filter(action == "recover") %>%
+  mutate(net_type = net_type_from_cast(cast),
+         cast     = strip_BR(cast)) %>%
+  group_by(cruise, station, cast, net_type) %>%
+  summarize(latitude_end_elog  = first(latitude),
+            longitude_end_elog = first(longitude), .groups = "drop")
+
+tow_meta <- tow_meta %>%
+  left_join(elog_end_coords, 
+            by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(latitude_end  = coalesce(latitude_end,  latitude_end_elog),
+         longitude_end = coalesce(longitude_end, longitude_end_elog)) %>%
+  select(-latitude_end_elog, -longitude_end_elog)
+
+## ------------------------------------------ ##
+##  Check coordinates: logsheet/v2 vs elog START coords (all cruises) 
+## ------------------------------------------ ##
+## --- deliberate START-coord fixes (bad logsheet entries -> elog) --- ## 
+# typos in logsheets, use elog vals
+# AR38   L6  : both lat + lon
+# AE2426 L2  : lat
+# AR92   L6  : lat
+# AR95   MVCO: lon
+# AR95   L6  : lon
+
+elog_start_coords <- event_log %>%
+  filter(action == "deploy") %>%
+  mutate(net_type = net_type_from_cast(cast),
+         cast     = strip_BR(cast)) %>%
+  group_by(cruise, station, cast, net_type) %>%
+  summarize(lat_start_elog = first(latitude),
+            lon_start_elog = first(longitude), .groups = "drop")
+
+start_check <- tow_meta %>%
+  select(cruise, station, cast, sample_name, net_type,
+         latitude_start, longitude_start) %>%
+  left_join(elog_start_coords, 
+            by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    lat_diff = latitude_start  - lat_start_elog,
+    lon_diff = longitude_start - lon_start_elog,
+    dist_m = sqrt((lat_diff * 111000)^2 +
+                    (lon_diff * 111000 * cos(latitude_start * pi/180))^2)
+  )
+
+start_check %>%
+  summarise(n_compared = sum(!is.na(dist_m)),
+            n_no_elog   = sum(is.na(dist_m)),
+            max_dist_m  = max(dist_m, na.rm = TRUE),
+            mean_dist_m = mean(dist_m, na.rm = TRUE),
+            n_over_500m = sum(dist_m > 500, na.rm = TRUE))
+
+start_check %>%
+  filter(dist_m > 500) %>%
+  arrange(desc(dist_m)) %>%
+  select(cruise, station, cast, latitude_start, lat_start_elog,
+         longitude_start, lon_start_elog, dist_m) %>%
+  print(n = Inf)
+
+tow_meta <- tow_meta %>%
+  left_join(elog_start_coords, by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    # AR38 L6: both coordinates
+    latitude_start  = if_else(cruise == "AR38" & station == "L6",
+                             lat_start_elog, latitude_start),
+    longitude_start = if_else(cruise == "AR38" & station == "L6",
+                              lon_start_elog, longitude_start),
+    # latitude-only fixes
+    latitude_start  = if_else((cruise == "AE2426" & station == "L2") |
+                               (cruise == "AR92" & station == "L6"),
+                             lat_start_elog, latitude_start),
+    # longitude-only fixes
+    longitude_start = if_else((cruise == "AR95" & station == "MVCO") |
+                                (cruise == "AR95" & station == "L6"),
+                              lon_start_elog, longitude_start)
+  ) %>%
+  select(-lat_start_elog, -lon_start_elog)
+
+## ========================================================================== ##
+## 2) DEPTHS  (depth_TDR corrected + depth_PX)
+## ========================================================================== ##
+
+## --- 2a) corrected depth_TDR = raw + offset (bongo AND AR99 ring) --- ##
+# sign check: EN644 L1 -> 23.2 + (-4) = 19.2  (~ v2 published 19). offset is
+# already in the additive (corrected = raw + offset) convention in this rds.
+tdr_corr <- tdr %>%
+  mutate(net_type       = net_type_from_cast(cast),
+         cast           = strip_BR(cast),
+         depth_TDR_corr = round(tdr_max_depth_m + offset_m, 2)) %>%
+  select(cruise, station, cast, net_type, depth_TDR_corr)
+
+tow_meta <- tow_meta %>%
+  mutate(.depth_TDR_orig = depth_TDR) %>%              # snapshot for the diff
+  left_join(tdr_corr, by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    depth_TDR = case_when(
+      !is.na(depth_TDR_corr) & (CORRECT_V2_DEPTH_TDR | cruise %in% new_cruises)
+        ~ depth_TDR_corr,
+      TRUE ~ depth_TDR
+    )
+  ) %>%
+  select(-depth_TDR_corr) %>%
+  relocate(depth_TDR, .after = depth_target)
+
+## --- manual depth_TDR overrides (specific known-bad values) --- ##
+# AE2426 L2, L7, L8 TDR column were actually PX depths, need to fix to actual TDR
+# TDR DEPTHS FROM TDR DATA:
+# L2 19 = 33.5 
+# L7 15 = 104
+# L8 13 = 131 
+# AE2426 L2/L7/L8: logsheet TDR col was actually a PX depth -> real TDR values
+# EN657  L1:       TDR file was nested under another cast; v2 used cosine (15.78)
+tow_meta <- tow_meta %>%
+  mutate(
+    depth_TDR = case_when(
+      cruise == "AE2426" & station == "L2" & cast == "19" ~ 33.5,
+      cruise == "AE2426" & station == "L7" & cast == "15" ~ 104,
+      cruise == "AE2426" & station == "L8" & cast == "13" ~ 131,
+      # I found the TDR file for EN657 L1 (it was nested in another file cast)
+      cruise == "EN657"  & station == "L1" & cast == "1"  ~ 15.78,
+      TRUE ~ depth_TDR
+    )
+  )
+
+## show exactly what changed on v2 rows (nothing silent) ##
+tow_meta %>%
+  filter(!cruise %in% new_cruises,
+         !is.na(.depth_TDR_orig),
+         round(.depth_TDR_orig, 2) != round(depth_TDR, 2)) %>%
+  transmute(cruise, station, cast,
+            was = .depth_TDR_orig, now = depth_TDR,
+            delta = round(depth_TDR - .depth_TDR_orig, 2)) %>%
+  arrange(desc(abs(delta))) %>%
+  print(n = Inf)
+
+## ------------------------------------------ ##
+##  Add depth_PX column 
+## ------------------------------------------ ##
+
+## --- 2b) depth_PX (new v3 column; v2 rows stay NA) --- ##
+px %>% count(cruise, station, cast) %>% arrange(desc(n)) %>% head()
+
+px_max <- px %>%
+  filter(!is.na(depth_m)) %>%
+  mutate(net_type = net_type_from_cast(cast),
+         cast     = strip_BR(cast)) %>%
+  group_by(cruise, station, cast, net_type) %>%
+  summarize(depth_PX = max(depth_m, na.rm = TRUE), .groups = "drop")
+
+## --- merge and add missing depth_PX -- 
+# casts where PX data wasnt saved but depth written
+# EN727 L9 = 200
+# AR99 L2 = 44 & L11 = 199
+# AR95 L6 = 91
+tow_meta <- tow_meta %>%
+  left_join(px_max, by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    depth_PX = case_when(          # manual fills where PX data was missing
+      cruise == "EN727" & station == "L9"  ~ 200,
+      cruise == "AR99"  & station == "L2"  ~ 44,
+      cruise == "AR99"  & station == "L11" ~ 199,
+      cruise == "AR95"  & station == "L6"  ~ 91,
+      TRUE ~ depth_PX
+    )
+  ) %>%
+  relocate(depth_PX, .after = depth_TDR)
+
+tow_meta_v3 %>%
+  filter(cruise %in% c("AE2426","EN727","AR88","AR92","AR95","AR99","HRS2601")) %>%
+  group_by(cruise) %>%
+  summarise(n = n(),
+            n_px = sum(!is.na(depth_PX)),
+            .groups = "drop")
+
+tow_meta_v3 %>%
+  filter(!is.na(depth_PX)) %>%
+  select(cruise, station, cast, depth_PX) %>%
+  arrange(cruise, station) %>%
+  print(n = Inf)
+
+# check that ar99 ring nets got tdr depth too
+
+## ============================================================================ ##
+## 3) net_max_depth   (coalesce corrected_TDR / PX / cosine / target)
+## ============================================================================ ##
+# Priority: keep published v2/logsheet value > corrected depth_TDR > depth_PX >
+#           cosine-law calc > depth_target.
+# Cosine law:  Z = L * cos(wire_angle)   [angle from vertical]
+# Ring nets are vertical tows -> use max_wire_out (or depth_target)
+
+## CHECK
+## i need to check whether TDR depths are already corrected/offsets applied
+#compare with tdrdata output/compare depths
+#TDR and PX depth columns should be "fixed" correct ones for calculations  -- check that that is the case by comparing with TDR data and values in the scrpt
+
+tow_meta <- tow_meta %>%
+  mutate(
+    # adding "." to mark these cols as temporary
+    .angle_rad = avg_angle * pi/180,
+    .tow_depth_calc = case_when(
+      net_type == "ring" & !is.na(max_wire_out)                      ~ max_wire_out,
+      net_type == "ring" & is.na(max_wire_out) & !is.na(depth_target) ~ depth_target,
+      !is.na(max_wire_out) & !is.na(avg_angle)                       ~ max_wire_out * cos(.angle_rad),
+      TRUE ~ NA_real_
+    ),
+    # Fill net_max_depth ONLY where it's currently NA (new cruises), preserving v2
+    net_max_depth = case_when(
+      !is.na(net_max_depth)   ~ net_max_depth,     # PRESERVE v2 / logsheet
+      !is.na(depth_TDR)       ~ depth_TDR,         # corrected TDR (new cruises)
+      !is.na(depth_PX)        ~ depth_PX,
+      !is.na(.tow_depth_calc) ~ .tow_depth_calc,
+      !is.na(depth_target)    ~ depth_target,
+      TRUE ~ NA_real_
+    )
+  )
+
+## ========================================================================== ##
+## 4) SPEEDS   (STW/SOG from script 02, new cruises; EN720 SOG override)
+## ========================================================================== ##
+
+## ------------------------------------------ ##
+#  Ship speed: pivot deploy/recover -> wide -----
+## ------------------------------------------ ##
+# 02 output is long (one row per deploy/recover) -> pivot to start/end
+ship_speed_wide <- ship_speed %>%
+  mutate(net_type = net_type_from_cast(cast),
+         cast     = strip_BR(cast)) %>%
+  filter(action %in% c("deploy", "recover")) %>%
+  select(cruise, station, cast, net_type, action,
+         speedlog_waterspeedfwd, speedlog_groundspeedfwd) %>%
+  distinct(cruise, station, cast, net_type, action, .keep_all = TRUE) %>%
+  pivot_wider(names_from  = action,
+              values_from = c(speedlog_waterspeedfwd, speedlog_groundspeedfwd),
+              names_glue  = "{.value}_{action}") %>%
+  rename(STW_start = speedlog_waterspeedfwd_deploy,
+         STW_end   = speedlog_waterspeedfwd_recover,
+         SOG_start = speedlog_groundspeedfwd_deploy,
+         SOG_end   = speedlog_groundspeedfwd_recover)
+
+# fill NEW cruises only; coalesce keeps v2 speeds intact
+tow_meta <- tow_meta %>%
+  left_join(ship_speed_wide, by = c("cruise", "station", "cast", "net_type"),
+            suffix = c("", "_new")) %>%
+  mutate(
+    STW_start = if_else(cruise %in% new_cruises, 
+                        coalesce(STW_start_new, STW_start), STW_start),
+    STW_end   = if_else(cruise %in% new_cruises, 
+                        coalesce(STW_end_new,   STW_end),   STW_end),
+    SOG_start = if_else(cruise %in% new_cruises, 
+                        coalesce(SOG_start_new, SOG_start), SOG_start),
+    SOG_end   = if_else(cruise %in% new_cruises, 
+                        coalesce(SOG_end_new,   SOG_end),   SOG_end)
+  ) %>%
+  select(-ends_with("_new"))
+# Endeavor STW stays NA bc speedlog reports GPS-SOG, no STW
+
+## ------------------------------------------ ##
+#      EN720: overwrite v2's placeholder SOG -----
+## ------------------------------------------ ##
+## EN720 was hardcoded 2 kt; real per-tow SOG now available; STW == NA
+# all other EN720 columns remain as published in v2
+en720_speed <- ship_speed_wide %>%
+  filter(cruise == "EN720") %>%
+  select(cruise, station, cast, net_type,
+         SOG_start_fix = SOG_start, SOG_end_fix = SOG_end)
+
+tow_meta <- tow_meta %>%
+  left_join(en720_speed, by = c("cruise", "station", "cast", "net_type")) %>%
+  mutate(
+    SOG_start = if_else(cruise == "EN720" & !is.na(SOG_start_fix), SOG_start_fix, SOG_start),
+    SOG_end   = if_else(cruise == "EN720" & !is.na(SOG_end_fix),   SOG_end_fix,   SOG_end)
+  ) %>%
+  select(-SOG_start_fix, -SOG_end_fix)
+
+## ============================================================================ ##
+## 5) VOLUME FILTERED   (keep flowmeter; fallback V = A*T*S where NA)
+## ============================================================================ ##
+# Flowmeter volumes already present & verified correct (logsheet + v2) -> KEEP.
+# Compute calculated fallback V = A * T * S only where flowmeter vol is NA.
+#   T = tow duration (s);  S = tow speed (m/s)
+# Speed priority: STW_start -> STW_end -> SOG_start -> SOG_end -> DEFAULT_SPEED_MS
+#   (SOG used before defaulting, so SOG-only cruises like EN727/AE2426/HRS use
+#    real measured speed instead of a 1.5 m/s guess. ~1-2 kt is typical.)
+
+# Flowmeter volumes (logsheet + v2) are KEPT. Compute fallback only where a
+# bongo flowmeter volume is NA.  T = tow duration (s); S = tow speed (m/s).
+# Speed priority: STW_start -> STW_end -> SOG_start -> SOG_end -> DEFAULT_SPEED_MS
+tow_meta <- tow_meta %>%
+  mutate(
+    .dur_s = as.numeric(difftime(datetime_UTC_end, datetime_UTC_start, units = "secs")),
+    .dur_s = if_else(.dur_s < 0, .dur_s + 24*3600, .dur_s),        # crossed midnight
+    .speed_kt = coalesce(abs(STW_start), abs(STW_end), abs(SOG_start), abs(SOG_end)),
+    .speed_ms = if_else(is.na(.speed_kt), DEFAULT_SPEED_MS, .speed_kt * KT_TO_MS),
+    .vol_calc = A_MOUTH * .dur_s * .speed_ms,
+    .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo",
+    .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo",
+    vol_filtered_335 = if_else(.vol335_was_na, .vol_calc, vol_filtered_335),
+    vol_filtered_150 = if_else(.vol150_was_na, .vol_calc, vol_filtered_150),
+    # ring nets are non-quantitative -> volume stays NA
+    vol_filtered_335 = if_else(net_type == "ring", NA_real_, vol_filtered_335),
+    vol_filtered_150 = if_else(net_type == "ring", NA_real_, vol_filtered_150)
+  )
+
+## ============================================================================ ##
+## 6) HAUL FACTORS   (fill NA only; v2 kept)
+## ============================================================================ ##
+tow_meta <- tow_meta %>%
+  mutate(
+    haul_factor_10m2_335  = if_else(is.na(haul_factor_10m2_335),
+                                    (net_max_depth*10)/vol_filtered_335, haul_factor_10m2_335),
+    haul_factor_10m2_150  = if_else(is.na(haul_factor_10m2_150),
+                                    (net_max_depth*10)/vol_filtered_150, haul_factor_10m2_150),
+    haul_factor_100m3_335 = if_else(is.na(haul_factor_100m3_335),
+                                    100/vol_filtered_335, haul_factor_100m3_335),
+    haul_factor_100m3_150 = if_else(is.na(haul_factor_100m3_150),
+                                    100/vol_filtered_150, haul_factor_100m3_150)
+  )
+
+## ============================================================================ ##
+## 7) DATA FLAGS   (new cruises; v2 flags preserved)
+## ============================================================================ ##
+# Build secondary_flag from depth/volume provenance + comments, then set
+# primary_flag = 3 where a secondary_flag exists (else 1). Only new cruises.
+tow_meta <- tow_meta %>%
+  mutate(
+    .sec = case_when(
+      grepl("hit bottom", comments, ignore.case = TRUE) ~ "hit bottom.",
+      is.na(depth_TDR) & is.na(depth_PX) & !is.na(.tow_depth_calc) ~
+        "Depth recorder (TDR) data not available. Net max depth was calculated based on wire information (cosine law).",
+      is.na(depth_TDR) & is.na(depth_PX) & is.na(.tow_depth_calc) & !is.na(depth_target) ~
+        "Target depth used for net max depth due to unavailable TDR data and wire information.",
+      net_type == "ring" & is.na(max_wire_out) & !is.na(depth_target) ~
+        "Target depth used for net max depth due to unavailable wire data for Ring Net.",
+      TRUE ~ NA_character_
+    )
+  )
+
+append_note <- function(sec, comments, pattern, note) {
+  hit <- grepl(pattern, comments, ignore.case = TRUE)
+  ifelse(hit, str_squish(paste(coalesce(sec, ""), note)), sec)
+}
+tow_meta <- tow_meta %>%
+  mutate(
+    .sec = append_note(.sec, comments, "tons of small salps", "many salps in this cruise."),
+    .sec = append_note(.sec, comments, "cod end broke",        "cod end broke."),
+    .sec = append_note(.sec, comments, "cod end was tangled",  "tangled cod end."),
+    .sec = append_note(.sec, comments, "Non quantitative 150", "non quantitative 150 micron sample."),
+    .sec = append_note(.sec, comments, "150um sample probably non quantitative", "non quantitative 150 micron sample."),
+    .sec = append_note(.sec, comments, "Non quantitative 335", "non quantitative 335 micron sample."),
+    .sec = append_note(.sec, comments, "Deployed and recovered without sample", "no sample."),
+    .sec = append_note(.sec, comments, "forgot to get flow start", "flowmeter issue."),
+    .sec = append_note(.sec, comments, "Flowmeter calibration", "no sample."),
+    .sec = append_note(.sec, comments, "no 20um ring net sample", "no 20um ring net sample."),
+    .sec = append_note(.sec, comments, "flowmeter reading is off", "flowmeter issue."),
+    .sec = append_note(.sec, comments, "missing flowmeter numbers for 335um net", "flowmeter issue."),
+    .sec = na_if(str_squish(.sec), "")
+  )
+
+# note calculated-volume tows in the flag
+tow_meta <- tow_meta %>%
+  mutate(
+    .sec = if_else(.vol335_was_na | .vol150_was_na,
+                   str_squish(paste(coalesce(.sec, ""),
+                     "Volume sampled calculated from ship speed and tow duration (flowmeter unavailable).")),
+                   .sec),
+    .sec = na_if(.sec, "")
+  )
+
+# apply ONLY to new-cruise rows with currently-missing flags (preserve v2)
+tow_meta <- tow_meta %>%
+  mutate(
+    secondary_flag = if_else(cruise %in% new_cruises & is.na(secondary_flag), .sec, secondary_flag),
+    primary_flag   = case_when(
+      cruise %in% new_cruises & is.na(primary_flag) & !is.na(secondary_flag) ~ 3,
+      cruise %in% new_cruises & is.na(primary_flag) &  is.na(secondary_flag) ~ 1,
+      TRUE ~ primary_flag
+    )
+  )
+
+## ------------------------------------------ ##
+#      Drop working columns -----
+## ------------------------------------------ ##
+tow_meta <- tow_meta %>% select(-starts_with("."))
+
+## ============================================================================ ##
+## QA/QC
+## ============================================================================ ##
+# 1. new cruises populated where expected
+tow_meta %>%
+  filter(cruise %in% new_cruises) %>%
+  group_by(cruise) %>%
+  summarise(n = n(),
+            stw_na   = sum(is.na(STW_start)),
+            sog_na   = sum(is.na(SOG_start)),
+            depth_na = sum(is.na(net_max_depth)),
+            vol335_na = sum(is.na(vol_filtered_335) & net_type == "bongo"),
+            haul_na  = sum(is.na(haul_factor_10m2_335) & net_type == "bongo"),
+            pflag_na = sum(is.na(primary_flag)),
+            .groups = "drop") %>%
+  print(n = Inf)
+
+# 2. net_max_depth rarely > depth_bottom (small overshoot ok - tow drift)
+tow_meta %>%
+  filter(net_max_depth > depth_bottom) %>%
+  mutate(diff = net_max_depth - depth_bottom) %>%
+  select(cruise, station, cast, depth_bottom, depth_TDR, depth_PX, net_max_depth, diff) %>%
+  arrange(desc(diff)) %>%
+  print(n = Inf)
+
+# 3. Endeavor STW still all NA (sanity - should be TRUE)
+tow_meta %>% filter(str_starts(cruise, "EN")) %>%
+  summarise(endeavor_stw_all_na = all(is.na(STW_start)))
+
+# 4. haul factors finite (no /0 from zero volume)
+tow_meta %>%
+  filter(is.infinite(haul_factor_100m3_335) | is.infinite(haul_factor_10m2_335)) %>%
+  select(cruise, station, cast, vol_filtered_335, net_max_depth)
+
+# 5. volume range sane per cruise (bongo only)
+tow_meta %>%
+  filter(net_type == "bongo") %>%
+  group_by(cruise) %>%
+  summarise(min_v = min(vol_filtered_335, na.rm = TRUE),
+            max_v = max(vol_filtered_335, na.rm = TRUE), .groups = "drop") %>%
+  mutate(across(where(is.numeric), ~ifelse(is.infinite(.), NA, .))) %>%
+  print(n = Inf)
+
+combined_dataframe %>%
+  filter(!is.na(net_max_depth)) %>%
+  group_by(cruise) %>%
+  summarise(
+    min_depth = min(net_max_depth, na.rm = TRUE),
+    max_depth = max(net_max_depth, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+## ------------------------------------------ ##
+#      Write -----
+## ------------------------------------------ ##
+stamp <- format(Sys.Date(), "%Y%m%d")
+write_csv(tow_meta, here("data", "processed",
+                         glue::glue("nes-lter-zooplankton-tow-metadata-v3-{stamp}.csv")))
