@@ -345,74 +345,6 @@ ring_tows <- ring_tows %>%
   mutate(across(any_of(num_cols), ~ suppressWarnings(as.numeric(.))),
          across(any_of(chr_cols), as.character))
 
-## ------------------------------------------ ##
-##    Manual fixes 
-## ------------------------------------------ ##
-# fixing some data entry errors 
-
-unique(combined_dataframe$cruise)
-
-# fix timestamps; depth_target
-
-#	AE2426_L5_B5; datetime_UTC_end should be = 2024-11-07 13:52:00 (incorrectly entered 2024-11-07 23:52:00)
-#	AE2426_L11_B9 = CTD was CAST 10 = sample name is B10
-
-#	AR88_L6_B10; datetime_UTC_end should be = 2025-04-27 00:00:00 (incorrectly entered 2025-04-26 00:00:00)
-#	AR88_L3_B18 wire rate in should be 18
-
-# AR92_L1_B1 = latitude_start should be 41.193702
-# AR92_L3_B22 = morph_ID_150 should be Y  & wire_rate_in should be 16
-
-# AR99_L8_B20 = target depth == 133
-
-combined_dataframe <- combined_dataframe %>%
-  mutate(
-    datetime_UTC_end = case_when(
-      # AE2426 L5 B5 — end time entered 23:52, should be 13:52
-      cruise == "AE2426" & station == "L5" & cast == "5" ~
-        as.POSIXct("2024-11-07 13:52:00", tz = "UTC"),
-      # AR88 L6 B10 — end date entered 2025-04-26, should be 2025-04-27
-      cruise == "AR88" & station == "L6" & cast == "10" ~
-        as.POSIXct("2025-04-27 00:00:00", tz = "UTC"),
-      TRUE ~ datetime_UTC_end
-    ),
-    # fix depth target typo
-    depth_target = case_when(
-      cruise == "AR99" & station == "L8" & cast == "20" ~ 133,
-      TRUE ~ depth_target
-    ),
-    # fix wire rate in entries
-    wire_rate_in = case_when(
-      cruise == "AR88" & station == "L3" & cast == "18" ~ 18, # AR88 L3 B18; 18
-      cruise == "AR92" & station == "L3" & cast == "22" ~ 16, # AR92 L3 B22; 16
-      TRUE ~ wire_rate_in
-    ),
-    # AR92 L1 B1 — latitude_start should be 41.193702
-    latitude_start = case_when(
-      cruise == "AR92" & station == "L1" & cast == "1" ~ 41.193702,
-      TRUE ~ latitude_start
-    ),
-    # AR92 L3 B22 — morph_ID_150 should be Y
-    morph_ID_150 = case_when(
-      cruise == "AR92" & station == "L3" & cast == "22" ~ "Y",
-      TRUE ~ morph_ID_150
-    )
-  )
-
-# check tow duration 
-combined_dataframe %>%
-  filter(!is.na(datetime_UTC_start), !is.na(datetime_UTC_end)) %>%
-  mutate(
-    duration_min = as.numeric(difftime(datetime_UTC_end,
-                                       datetime_UTC_start,
-                                       units = "mins"))
-  ) %>%
-  select(cruise, station, cast, datetime_UTC_start, datetime_UTC_end,
-         duration_min) %>%
-  arrange(duration_min) %>%
-  as.data.frame() %>%
-  print()
-
 # confirm types still match v2 right 
 identical(sapply(combined_dataframe[names(tow_meta_v2)], \(x) class(x)[1]),
           sapply(tow_meta_v2, \(x) class(x)[1]))   # should be TRUE
@@ -456,6 +388,102 @@ tow_meta_v3 %>%
   )
 
 ## ------------------------------------------ ##
+##    Manual fixes 
+## ------------------------------------------ ##
+# fixing some data entry errors 
+
+unique(combined_dataframe$cruise)
+
+# fix timestamps; depth_target
+
+# EN617 MVCO B35 has datetime_UTC_start should be 01:40 (not 01:43)
+
+#	AE2426_L5_B5; datetime_UTC_end should be = 2024-11-07 13:52:00 (incorrectly entered 2024-11-07 23:52:00)
+#	AE2426_L11_B9 = CTD was CAST 10 = sample name is B10
+
+#	AR88_L6_B10; datetime_UTC_end should be = 2025-04-27 00:00:00 (incorrectly entered 2025-04-26 00:00:00)
+#	AR88_L3_B18 wire rate in should be 18
+
+# AR92_L1_B1 = latitude_start should be 41.193702
+# AR92_L3_B22 = morph_ID_150 should be Y  & wire_rate_in should be 16
+
+# AR99_L8_B20 = target depth == 133
+
+tow_meta_v3 <- tow_meta_v3 %>%
+  mutate(
+    datetime_UTC_end = case_when(
+      # AE2426 L5 B5 — end time entered 23:52, should be 13:52
+      cruise == "AE2426" & station == "L5" & cast == "5" ~
+        as.POSIXct("2024-11-07 13:52:00", tz = "UTC"),
+      # AR88 L6 B10 — end date entered 2025-04-26, should be 2025-04-27
+      cruise == "AR88" & station == "L6" & cast == "10" ~
+        as.POSIXct("2025-04-27 00:00:00", tz = "UTC"),
+      # fixes to v2: AR32 
+      cruise == "AR32" & station == "L6" & cast == "4"  ~
+        as.POSIXct("2018-11-13 00:59:00", tz = "UTC"),
+      cruise == "AR32" & station == "L7" & cast == "5"  ~
+        as.POSIXct("2018-11-13 03:06:00", tz = "UTC"),
+      TRUE ~ datetime_UTC_end
+    ),
+    datetime_UTC_start = case_when(
+      cruise == "EN617" & station == "MVCO" & cast == "35" ~
+        as.POSIXct("2018-07-25 01:40:00", tz = "UTC"),
+      # fixes to v2: AR61B
+      cruise == "AR61B" & station == "L10" & cast == "7" ~
+        as.POSIXct("2021-11-09 16:49:00", tz = "UTC"),
+      TRUE ~ datetime_UTC_start
+    ),
+    # fix depth target typo
+    depth_target = case_when(
+      cruise == "AR99" & station == "L8" & cast == "20" ~ 133,
+      TRUE ~ depth_target
+    ),
+    # fix wire rate in entries
+    wire_rate_in = case_when(
+      cruise == "AR88" & station == "L3" & cast == "18" ~ 18, # AR88 L3 B18; 18
+      cruise == "AR92" & station == "L3" & cast == "22" ~ 16, # AR92 L3 B22; 16
+      TRUE ~ wire_rate_in
+    ),
+    # AR92 L1 B1 — latitude_start should be 41.193702
+    latitude_start = case_when(
+      cruise == "AR92" & station == "L1" & cast == "1" ~ 41.193702,
+      TRUE ~ latitude_start
+    ),
+    # AR92 L3 B22 — morph_ID_150 should be Y
+    morph_ID_150 = case_when(
+      cruise == "AR92" & station == "L3" & cast == "22" ~ "Y",
+      TRUE ~ morph_ID_150
+    ),
+    # typo to tot_flow_counts_150
+    tot_flow_counts_150 = case_when(
+      cruise == "AR92" & station == "L5" & cast == "7" ~ flow_end_150 - flow_start_150,
+      cruise == "AR95" & station == "L5" & cast == "6" ~ flow_end_150 - flow_start_150,
+      TRUE ~ tot_flow_counts_150
+    ),
+    ## --- fixes to v2 --- #
+    # fix sample_name data-entry typos
+    sample_name = case_when(
+      cruise == "AR38"  & station == "L7" & cast == "9"  ~ "AR38_L7_B9",
+      cruise == "EN715" & station == "L3" & cast == "15" ~ "EN715_L3_B15",
+      TRUE ~ sample_name
+    )
+  )
+
+# check tow duration 
+tow_meta_v3 %>%
+  filter(!is.na(datetime_UTC_start), !is.na(datetime_UTC_end)) %>%
+  mutate(
+    duration_min = as.numeric(difftime(datetime_UTC_end,
+                                       datetime_UTC_start,
+                                       units = "mins"))
+  ) %>%
+  select(cruise, station, cast, datetime_UTC_start, datetime_UTC_end,
+         duration_min) %>%
+  arrange(duration_min) %>%
+  as.data.frame() %>%
+  print()
+
+## ------------------------------------------ ##
 ##  Add net_type column
 ## ------------------------------------------ ##
 # bongo = bongo-frame deployment (335 + 150 nets; historically w ring net on same wire)
@@ -485,5 +513,5 @@ saveRDS(tow_meta_v3, here("data", "processed",
                            glue::glue("tow-meta-v3-intermediate-{stamp}.rds")))
 
 ################################################################################
-# go to -----------> 04.R
+# go to -----------> 04_tow_metadata_assemble.R
 ################################################################################
