@@ -1,18 +1,15 @@
 need to add HRS2601, HRS2609, and AR105 files
-need to add info about size_frat_20 to csv files ?
 
 To-Do:
-
-03_bongo_logs_merge.R
-- in 03 need to go back and check coordinate differences between elog and logshetet
-- check 
-
 - compare entries with event logs
-- need a new ring_net_20 col?
 - winch data post hrs2303?
 - renv
 - readme update with script ordering and tree 
-- coss checks of data for new cruises between logsheet; event log; tdr etc
+- cross checks of data for new cruises between logsheet; event log; tdr etc
+- flowmeter values 150 net during AR95 and AR99
+- need to add QAQC to the inventory csv
+- Primary/secondary flags
+- 00_packages ??? 
 
 QA/QC
 - check TDR package; maybe add here a final QAQC script for checking everything 
@@ -27,8 +24,6 @@ QA/QC
 - need to reformat dates?
 - can bring in v2 columns to check names/order goal
 
--- also maybe somewhere i can have event log csv and max sampling depth csv read in to cross check data 
-
 NEED FIX
 - AE2426 
 == some are px sensor depth but i think put in tdr max depth??? need to check 
@@ -39,9 +34,3 @@ NEED FIX
 
 - EN720 
 - check the Y and N for the sample columns 
-
-- flowmeter values 150 net during AR95 and AR99
-- need to add QAQC to the inventory csv
-- Haul factors
-- Primary/secondary flags
-- 00_packages ??? 
