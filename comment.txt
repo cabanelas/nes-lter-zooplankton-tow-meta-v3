@@ -4,10 +4,9 @@ To-Do:
 - winch data post hrs2303?
 - renv
 - readme update with script ordering and tree 
-- flowmeter values 150 net during AR95 and AR99
 - need to add QAQC to the inventory csv
-- Primary/secondary flags
 - 00_packages ??? 
+- av speed lowering and raising wire
 
 QA/QC
 - check TDR package; maybe add here a final QAQC script for checking everything 
@@ -27,8 +26,8 @@ QA/QC
 
 NEED FIX
 - AE2426 
-== L5 B5 - splits of the sample
-== L6    - splits of the sample 
+== L5 B5    - splits of the sample -- fix on inventory sheet too
+== L6 B17   - splits of the sample 
 - AR92 sample splits
-- EN720 
-== check the Y and N for the sample columns 
+
+- flowmeter values 150 net during AR95 and AR99
