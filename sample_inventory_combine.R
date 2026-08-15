@@ -6,12 +6,13 @@
 ## Purpose: Read the per-cruise sample-inventory workbooks, clean names, stack
 ##          them into one long table, and write a combined CSV. Downstream this
 ##          feeds the size_fract_20 column in the tow-metadata objects.
-##
+## Including all cruises to date 
 ## Inputs  (data/raw/sample_inventory/):
 ##   - <CRUISE>_SampleInventory.xlsx   (one per cruise)
 ## Output  (data/processed/):
 ##   - sample_inventory_combined-YYYYMMDD.csv
 ################################################################################
+# no sample inventory file available for: AR28B, AR34B, AR39B, AR66B
 
 ## ------------------------------------------ ##
 #            Packages -----
@@ -27,7 +28,7 @@ library(janitor)
 inv_dir <- here("data", "raw", "sample_inventory")
 
 inv_files <- list.files(inv_dir, pattern = "_SampleInventory\\.xlsx$",
-                        full.names = TRUE)
+                        full.names = TRUE, recursive = TRUE)
 message("Found ", length(inv_files), " inventory files:\n  ",
         paste(basename(inv_files), collapse = "\n  "))
 
@@ -36,6 +37,7 @@ inv_list <- inv_files %>%
   set_names(str_remove(basename(.), "_SampleInventory\\.xlsx$")) %>%
   map(~ read_excel(.x) %>%
         clean_names() %>%
+        rename(any_of(c(cast = "tow"))) %>%   # EN644 logsheet used 'tow'
         mutate(across(everything(), as.character)))   # avoid type clashes on bind
 
 ## ------------------------------------------ ##
@@ -74,6 +76,31 @@ inv_all <- inv_all %>%
   )
 
 glimpse(inv_all)
+lapply(inv_all, unique)
+
+## ------------------------------------------ ##
+#      Clean cast: drop X rows, strip B/R prefix + decimal -----
+## ------------------------------------------ ##
+# cast is mixed: "1.0", "B1", "X", "1"
+# Normalize to a bare number as character ("B19" -> "19", "4.0" -> "4")
+# Drop cast == "X" == no valid tow
+inv_all <- inv_all %>%
+  filter(cast != "X") %>%
+  mutate(cast = cast %>%
+           str_remove("^[BR]") %>%    # "B19" -> "19"
+           str_remove("\\.0+$"))      # "4.0" -> "4"
+
+## ------------------------------------------ ##
+#      Hand fix -----
+## ------------------------------------------ ##
+# AR32: 20um size-fraction samples were not taken -> force all to 0
+# AT46: no 100-200um size fraction this cruise, so 20um "2" -> "1" (leave 0 as is)
+inv_all <- inv_all %>%
+  mutate(mesh_20_size_fract = case_when(
+    cruise == "AR32"                          ~ "0",
+    cruise == "AT46" & mesh_20_size_fract == "2" ~ "1",
+    TRUE ~ mesh_20_size_fract
+  ))
 
 ## ------------------------------------------ ##
 #            Write -----
