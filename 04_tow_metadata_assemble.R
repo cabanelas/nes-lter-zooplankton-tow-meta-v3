@@ -23,7 +23,7 @@
 ##  (data/processed/):
 ##   - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
 ##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
-##   - sample_inventory_combined-YYYYMMDD.rds  (sample_inventory_combine.R)
+##   - sample_inventory_combined-YYYYMMDD.csv  (sample_inventory_combine.R)
 ##  (data/raw/):
 ##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv     (nes-lter-api-pulls)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
@@ -109,10 +109,20 @@ tdr <- read_csv(here("data", "raw", "nes-lter-bongo-tdr-offsets.csv"))
 ## --- ship speed from script 02_ship_speed_eventlog_merge.R --- ##
 ship_speed <- read_csv(here("data", "processed", "shipspeed_eventlog_v3.csv"))
 
+## --- most-recent sample inventory --- ##
+inv_files <- list.files(here("data", "processed"),
+                        pattern = "^sample_inventory_combined-.*\\.csv$",
+                        full.names = TRUE)
+if (length(inv_files) == 0) stop("No sample_inventory_combined-*.csv in data/processed/")
+inv_dates <- as.Date(str_extract(basename(inv_files), "\\d{8}"), "%Y%m%d")
+latest_inventory <- inv_files[which.max(inv_dates)]
+message("Reading sample inventory: ", basename(latest_inventory))
+inventory <- read_csv(latest_inventory)
+
 # columns that are entirely NA across the new-cruise rows
 tow_meta %>%
   filter(cruise %in% new_cruises, net_type != "ring") %>%
-  summarise(across(everything(), ~ all(is.na(.)))) %>%
+  summarize(across(everything(), ~ all(is.na(.)))) %>%
   pivot_longer(everything(), names_to = "column", values_to = "all_na") %>%
   filter(all_na) %>%
   mutate(pos = match(column, names(tow_meta))) %>%
@@ -178,7 +188,7 @@ start_check <- tow_meta %>%
   )
 
 start_check %>%
-  summarise(n_compared = sum(!is.na(dist_m)),
+  summarize(n_compared = sum(!is.na(dist_m)),
             n_no_elog   = sum(is.na(dist_m)),
             max_dist_m  = max(dist_m, na.rm = TRUE),
             mean_dist_m = mean(dist_m, na.rm = TRUE),
@@ -237,7 +247,7 @@ tow_meta <- tow_meta %>%
       TRUE ~ depth_TDR
     )
   ) %>%
-  select(-depth_TDR_corr) %>%
+  select(-c(depth_TDR_corr, .depth_TDR_orig)) %>%
   relocate(depth_TDR, .after = depth_target)
 
 ## ------------------------------------------ ##
@@ -247,7 +257,7 @@ tow_meta <- tow_meta %>%
 ## --- 2b) depth_PX (new v3 column; v2 rows stay NA) --- ##
 tdr %>% filter(!is.na(px_max_depth_m)) %>% count(cruise) %>% arrange(desc(n))
 tdr %>% group_by(cruise) %>%
-  summarise(n = n(),
+  summarize(n = n(),
             n_px = sum(!is.na(px_max_depth_m)),
             .groups = "drop")
 
@@ -306,6 +316,8 @@ tow_meta <- tow_meta %>%
     ),
     # Fill net_max_depth ONLY where it's currently NA (new cruises), preserving v2
     net_max_depth = case_when(
+      # EN712 / EN720: use corrected depth_TDR
+      cruise %in% c("EN712","EN720") & !is.na(depth_TDR) ~ depth_TDR,
       !is.na(net_max_depth)   ~ net_max_depth,     # PRESERVE v2 / logsheet
       !is.na(depth_TDR) & !is.na(depth_PX) ~ (depth_TDR + depth_PX) / 2,  # both -> average
       !is.na(depth_TDR)       ~ depth_TDR,         # corrected TDR (new cruises)
@@ -314,8 +326,8 @@ tow_meta <- tow_meta %>%
       !is.na(depth_target)    ~ depth_target,
       TRUE ~ NA_real_
     )
-  )
-
+  ) 
+  
 # Check if net_max_depth_m is ever greater than depth_bottom
 tow_meta %>%
   filter(net_max_depth > depth_bottom) %>%
@@ -388,21 +400,27 @@ tow_meta <- tow_meta %>%
 # When flowmeter vol == NA -> Compute  V = A * T * S 
 #   T = tow duration (s);  S = tow speed (m/s)
 # Speed priority: STW_start -> STW_end -> SOG_start -> SOG_end -> DEFAULT_SPEED_MS
-#   (SOG used before defaulting, so SOG-only cruises like EN727/AE2426/HRS use
-#    real measured speed instead of a 1.5 m/s guess. ~1-2 kt is typical.)
+
+# plausible tow-speed window (knots); outside this -> treat as unusable
+SPEED_MIN_KT <- 1
+SPEED_MAX_KT <- 4
+
+# helper: keep a speed only if it's in range, else NA (so coalesce moves on)
+.valid <- function(x) if_else(!is.na(x) & abs(x) >= SPEED_MIN_KT & abs(x) <= SPEED_MAX_KT, abs(x), NA_real_)
 
 tow_meta <- tow_meta %>%
   mutate(
     .dur_s = as.numeric(difftime(datetime_UTC_end, datetime_UTC_start, units = "secs")),
-    .dur_s = if_else(.dur_s < 0, .dur_s + 24*3600, .dur_s),        # crossed midnight
-    .speed_kt = coalesce(abs(STW_start), abs(STW_end), abs(SOG_start), abs(SOG_end)),
+    .dur_s = if_else(.dur_s < 0, .dur_s + 24*3600, .dur_s),
+    # each source screened for plausibility, then prioritized
+    .speed_kt = coalesce(.valid(STW_start), .valid(STW_end),
+                         .valid(SOG_start), .valid(SOG_end)),
     .speed_ms = if_else(is.na(.speed_kt), DEFAULT_SPEED_MS, .speed_kt * KT_TO_MS),
     .vol_calc = A_MOUTH * .dur_s * .speed_ms,
     .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo",
     .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo",
     vol_filtered_335 = if_else(.vol335_was_na, .vol_calc, vol_filtered_335),
     vol_filtered_150 = if_else(.vol150_was_na, .vol_calc, vol_filtered_150),
-    # ring nets are non-quantitative -> volume stays NA
     vol_filtered_335 = if_else(net_type == "ring", NA_real_, vol_filtered_335),
     vol_filtered_150 = if_else(net_type == "ring", NA_real_, vol_filtered_150)
   )
@@ -426,7 +444,8 @@ tow_meta <- tow_meta %>%
 ## 7) DATA FLAGS   (new cruises; v2 flags preserved)
 ## ============================================================================ ##
 ## fix flag for EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
-
+# maybe EN608 needs primary flags check
+# EN617 MVCO 35B flG 3 FLOW CALIB theres another one that has it 
 # Build secondary_flag from depth/volume provenance + comments, then set
 # primary_flag = 3 where a secondary_flag exists (else 1). Only new cruises.
 tow_meta <- tow_meta %>%
