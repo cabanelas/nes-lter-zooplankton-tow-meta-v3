@@ -497,6 +497,28 @@ tow_meta <- tow_meta %>%
 # EN617 MVCO 35B flG 3 FLOW CALIB theres another one that has it 
 # Build secondary_flag from depth/volume provenance + comments, then set
 # primary_flag = 3 where a secondary_flag exists (else 1). Only new cruises.
+
+## comments from old script:
+#secondary_flag
+# actual measurement of depth recorder (TDR) not available. 
+# Net max. depth was calculated based on wire information and bottom max depth
+
+## check comments for any other flags needed
+# 3:
+# Cod end broke == cod end broke
+# Broke == cod end broke
+# Cod end was tangled == tangled cod end   
+# Non quantitative == non quantitative 
+# Forgot to get flow start == flowmeter issue
+# [H]hit bottom == hit bottom
+# F[f]lowmeter [C]calibration == no sample
+# No 20um ring net sample == no 20um ring net sample
+# Tons of small salps == many salps in this cruise
+# flowmeter reading is off == flowmeter issue
+# Missing flowmeter numbers for 335um net == flowmeter issue
+
+
+
 tow_meta <- tow_meta %>%
   mutate(
     .sec = case_when(
