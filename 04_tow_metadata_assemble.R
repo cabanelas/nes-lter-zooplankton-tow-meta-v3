@@ -14,10 +14,10 @@
 ##    2. depths        (depth_TDR corrected + depth_PX, incl. AR99 ring)
 ##    3. net_max_depth (coalesce corrected_TDR / PX / cosine / target)
 ##    4. speeds        (STW/SOG, deploy+recover from script 02)
-##    5. volume        (keep flowmeter; fallback V=A*T*S where flowmeter == NA)
-##    6. haul factors
-##    7. data flags
-## size fract col** [ideally should come after speeds] maybe can use inventory sheets for this.. 
+##    5. size_fract_20 (from inventory sheet)
+##    6. volume        (keep flowmeter; fallback V=A*T*S where flowmeter == NA)
+##    7. haul factors
+##    8. data flags
 ##
 ## Inputs (data/):
 ##  (data/processed/):
@@ -72,7 +72,6 @@ library(lubridate)
 NET_DIAM_M   <- 0.61                  # 61-cm bongo mouth
 A_MOUTH      <- pi * (NET_DIAM_M/2)^2 # 0.2922 m^2
 KT_TO_MS     <- 0.514444              # knots -> m/s
-DEFAULT_SPEED_MS <- 1.5               # last-resort tow speed if STW & SOG == NA
 
 # new v3 cruises that need derived columns filled (v2 rows preserved)
 new_cruises <- c("AE2426", "EN727", "AR88", "AR92", "AR95", "AR99", "HRS2601")
@@ -393,13 +392,55 @@ tow_meta <- tow_meta %>%
   select(-SOG_start_fix, -SOG_end_fix)
 
 ## ========================================================================== ##
-## 5) VOLUME FILTERED   (keep flowmeter; V = A*T*S where NA)
+## 5) Fill in size_fract_20
+## ========================================================================== ##
+# Y if a 20um size-fraction sample exists (mesh_20_size_fract > 0), else N.
+# Fill only where size_fract_20 == NA; existing (v2) values preserved
+# AR99 exception: the 20um ring net became a SEPARATE deployment at AR99, so its
+# bongo tows carry no 20um sample -> "N", and the ring rows carry it -> "Y".
+inv_sf20 <- inventory %>%
+  group_by(cruise, station, cast) %>%
+  summarize(size_fract_20_inv = if_else(any(mesh_20_size_fract > 0, 
+                                            na.rm = TRUE),
+                                        "Y", "N"),
+            .groups = "drop")
+
+tow_meta <- tow_meta %>%
+  left_join(inv_sf20, by = c("cruise", "station", "cast")) %>%
+  mutate(
+    size_fract_20 = case_when(
+      cruise == "AR99" & net_type == "ring"  ~ "Y",
+      cruise == "AR99" & net_type == "bongo" ~ "N",
+      is.na(size_fract_20)                   ~ size_fract_20_inv,
+      TRUE                                   ~ size_fract_20
+    )
+  ) %>%
+  select(-size_fract_20_inv)
+
+# Confirmed against logsheets & inventory Aug 2026 (QA vs sample inventory):
+#   AR63 L4 & L7 : size_fract_20  N -> Y
+#   AT46 L6      : DNA_335        Y -> N
+#   HRS2303 MVCO : size_fract_20  N -> Y
+#   AR38 (all)   : size_fract_20  N -> Y
+tow_meta <- tow_meta %>%
+  mutate(
+    size_fract_20 = case_when(
+      cruise == "AR63" & station %in% c("L4", "L7") ~ "Y",
+      cruise == "HRS2303" & station == "MVCO"       ~ "Y",
+      cruise == "AR38" & net_type == "bongo"        ~ "Y",
+      TRUE ~ size_fract_20
+    ),
+    DNA_335 = if_else(sample_name == "AT46_L6_B6", "N", DNA_335)
+  )
+
+## ========================================================================== ##
+## 6) VOLUME FILTERED   (keep flowmeter; V = A*T*S where NA)
 ## ========================================================================== ##
 # Flowmeter volumes already present & verified correct (logsheet + v2) -> KEEP
 
 # When flowmeter vol == NA -> Compute  V = A * T * S 
 #   T = tow duration (s);  S = tow speed (m/s)
-# Speed priority: STW_start -> STW_end -> SOG_start -> SOG_end -> DEFAULT_SPEED_MS
+# Speed priority: STW_start -> STW_end -> SOG_start -> SOG_end
 
 # plausible tow-speed window (knots); outside this -> treat as unusable
 SPEED_MIN_KT <- 1
@@ -415,18 +456,26 @@ tow_meta <- tow_meta %>%
     # each source screened for plausibility, then prioritized
     .speed_kt = coalesce(.valid(STW_start), .valid(STW_end),
                          .valid(SOG_start), .valid(SOG_end)),
-    .speed_ms = if_else(is.na(.speed_kt), DEFAULT_SPEED_MS, .speed_kt * KT_TO_MS),
+    .speed_ms = .speed_kt * KT_TO_MS,
     .vol_calc = A_MOUTH * .dur_s * .speed_ms,
-    .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo",
-    .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo",
+    .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo" & cruise %in% new_cruises,
+    .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo" & cruise %in% new_cruises,
     vol_filtered_335 = if_else(.vol335_was_na, .vol_calc, vol_filtered_335),
     vol_filtered_150 = if_else(.vol150_was_na, .vol_calc, vol_filtered_150),
     vol_filtered_335 = if_else(net_type == "ring", NA_real_, vol_filtered_335),
     vol_filtered_150 = if_else(net_type == "ring", NA_real_, vol_filtered_150)
   )
 
+# check which rows did not have flowmeter volume and relied on this fallback
+tow_meta %>%
+  filter(.vol335_was_na | .vol150_was_na) %>%
+  select(cruise, station, cast, sample_name,
+         .vol335_was_na, .vol150_was_na,
+         .speed_kt, .dur_s, .vol_calc,
+         vol_filtered_335, vol_filtered_150)
+
 ## ============================================================================ ##
-## 6) HAUL FACTORS   (fill NA only; v2 kept)
+## 7) HAUL FACTORS   (fill NA only; v2 kept)
 ## ============================================================================ ##
 tow_meta <- tow_meta %>%
   mutate(
@@ -441,7 +490,7 @@ tow_meta <- tow_meta %>%
   )
 
 ## ============================================================================ ##
-## 7) DATA FLAGS   (new cruises; v2 flags preserved)
+## 8) DATA FLAGS   (new cruises; v2 flags preserved)
 ## ============================================================================ ##
 ## fix flag for EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
 # maybe EN608 needs primary flags check
@@ -509,9 +558,9 @@ tow_meta <- tow_meta %>%
 ## ------------------------------------------ ##
 tow_meta <- tow_meta %>% select(-starts_with("."))
 
-## ============================================================================ ##
+## ========================================================================== ##
 ## QA/QC
-## ============================================================================ ##
+## ========================================================================== ##
 # 1. new cruises populated where expected
 tow_meta %>%
   filter(cruise %in% new_cruises) %>%
