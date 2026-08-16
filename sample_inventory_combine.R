@@ -122,6 +122,15 @@ inv_all <- inv_all %>%
     comments            = "Hit bottom bongo; only 20um size-fraction sample kept; Station resampled."
   )
 
+# EN657 L1 B1: both 335 samples (NOAA + DNA) were taken; correct to 1. nonquant
+inv_all <- inv_all %>%
+  mutate(
+    mesh_335_noaa    = if_else(cruise == "EN657" & station == "L1" & cast == "1",
+                               "1", mesh_335_noaa),
+    mesh_335_tar_dna = if_else(cruise == "EN657" & station == "L1" & cast == "1",
+                               "1", mesh_335_tar_dna)
+  )
+
 ## ------------------------------------------ ##
 #            Write -----
 ## ------------------------------------------ ##
