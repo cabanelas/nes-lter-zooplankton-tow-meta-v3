@@ -443,6 +443,7 @@ unique(combined_dataframe$cruise)
 # fix timestamps; depth_target
 
 # EN617 MVCO B35 has datetime_UTC_start should be 01:40 (not 01:43)
+# EN657 L1 B1 both 335 samples were taken
 
 #	AE2426_L5_B5; datetime_UTC_end should be = 2024-11-07 13:52:00 (incorrectly entered 2024-11-07 23:52:00)
 #	AE2426_L11_B9 = CTD was CAST 10 = sample name is B10
@@ -499,6 +500,15 @@ tow_meta_v3 <- tow_meta_v3 %>%
     morph_ID_150 = case_when(
       cruise == "AR92" & station == "L3" & cast == "22" ~ "Y",
       TRUE ~ morph_ID_150
+    ),
+    # EN657 L1 B1 — both 335 samples were taken; v2 published N; nonquant
+    NOAA_335 = case_when(
+      cruise == "EN657" & station == "L1" & cast == "1" ~ "Y",
+      TRUE ~ NOAA_335
+    ),
+    DNA_335 = case_when(
+      cruise == "EN657" & station == "L1" & cast == "1" ~ "Y",
+      TRUE ~ DNA_335
     ),
     # typo to tot_flow_counts_150
     tot_flow_counts_150 = case_when(
