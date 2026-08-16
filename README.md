@@ -2,7 +2,7 @@
 
 This repository contains the R scripts that build the **NES-LTER zooplankton tow metadata** data package (v3) submitted to the Environmental Data Initiative (EDI). The package provides tow-level metadata for zooplankton samples collected with Bongo and ring nets along the Northeast U.S. Shelf Long-Term Ecological Research (NES-LTER) Transect, ongoing since 2018.
 
-Version 3 extends the published v2 package (which ended at cruise EN720) by adding the 2024–2026 cruises **AE2426, EN727, AR88, AR92, AR95, AR99, and HRS2601**, and introduces the `depth_PX` sensor field (Kongsberg Simrad PX, starting AE2426) and separate ring-net tow logging (starting AR99).
+Version 3 extends the published v2 package (which ended at cruise EN720) by adding the 2024–2026 cruises **AE2426, EN727, AR88, AR92, AR95, AR99, and HRS2601**, and adds the `depth_PX` sensor field (Kongsberg Simrad PX, starting AE2426) and separate ring-net tow logging (starting AR99).
 
 ## Repository structure
 
