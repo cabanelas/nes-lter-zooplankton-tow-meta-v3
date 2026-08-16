@@ -482,13 +482,25 @@ tow_meta <- tow_meta %>%
     vol_filtered_150 = if_else(net_type == "ring", NA_real_, vol_filtered_150)
   )
 
-# check which rows did not have flowmeter volume and relied on this fallback
+# check which rows did not have flowmeter volume and used fallback approach
 tow_meta %>%
   filter(.vol335_was_na | .vol150_was_na) %>%
   select(cruise, station, cast, sample_name,
          .vol335_was_na, .vol150_was_na,
          .speed_kt, .dur_s, .vol_calc,
          vol_filtered_335, vol_filtered_150)
+
+# AR63 L5 B2 (v2): valid counts but vol_filtered published NA
+# recompute volume from counts
+tow_meta <- tow_meta %>%
+  mutate(
+    vol_filtered_335 = if_else(sample_name == "AR63_L5_B2" & is.na(vol_filtered_335),
+                               tot_flow_counts_335 * 0.026873 * A_MOUTH,
+                               vol_filtered_335),
+    vol_filtered_150 = if_else(sample_name == "AR63_L5_B2" & is.na(vol_filtered_150),
+                               tot_flow_counts_150 * 0.026873 * A_MOUTH,
+                               vol_filtered_150)
+  )
 
 ## ============================================================================ ##
 ## 7) HAUL FACTORS   (fill NA only; v2 kept)
@@ -505,18 +517,13 @@ tow_meta <- tow_meta %>%
                                     100/vol_filtered_150, haul_factor_100m3_150)
   )
 
-## ============================================================================ ##
+## ========================================================================== ##
 ## 8) DATA FLAGS   (new cruises; v2 flags preserved)
-## ============================================================================ ##
+## ========================================================================== ##
 ## QARTOD primary-level (IOC 54:V3): 1 Good, 3 Suspect/high-interest,
 ## 4 Bad (failed critical), 9 Missing. 2 (not evaluated) discouraged
 ## primary_flag = worst-case across all conditions on the row
-##
-## Manual v2 changes (EN657 L1 B1, EN617 MVCO 35B, EN608)
-# EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
-# EN608 needs primary flags check
-# EN617 MVCO 35B flG 3 FLOW CALIB theres another one that has it 
-
+#
 # Build secondary_flag from depth/volume provenance + comments, then set
 # primary_flag = 3 where a secondary_flag exists (else 1). Only new cruises.
 
@@ -528,7 +535,6 @@ tow_meta <- tow_meta %>%
 flag_rules <- tribble(
   ~pattern,                                                              ~note,                                      ~level,
   "cod end broke|cod end came off|cod end leaked|leaking|loose mesh",    "cod end issue; some sample may be lost.",  3L,
-  #"no ring net|no 20um ring net|ring net broke|ring net ripped|ring net.*hole|lost cod end on 20um", "no ring net / 20um sample.", 3L,
   "flowmeter for 150.*(off|not working)|flowmeter.*150um.*not working",  "150um flowmeter issue.",                   3L,
   "spill|lost.*sample|lost ~|sample was not processed",                  "some sample lost.",                        3L,
   "salps",                                                               "many salps.",                              3L,
@@ -546,9 +552,9 @@ tow_meta <- tow_meta %>%
     .sec = case_when(
       grepl("(?<!didn't )(?<!did not )(?<!not )hit bottom", comments, ignore.case = TRUE, perl = TRUE) ~ "hit bottom.",
       is.na(depth_TDR) & is.na(depth_PX) & !is.na(.tow_depth_calc) ~
-        "Depth recorder (TDR) data not available. Net max depth calculated from wire information (cosine law).",
+        "Depth recorder (TDR) and PX sensor data not available. Net max depth calculated from wire information (cosine law).",
       is.na(depth_TDR) & is.na(depth_PX) & is.na(.tow_depth_calc) & !is.na(depth_target) ~
-        "Target depth used for net max depth (TDR and wire data unavailable).",
+        "Target depth used for net max depth (TDR, PX, and wire data unavailable).",
       net_type == "ring" & is.na(max_wire_out) & !is.na(depth_target) ~
         "Target depth used for net max depth (wire data unavailable for ring net).",
       TRUE ~ NA_character_
@@ -604,6 +610,13 @@ tow_meta <- tow_meta %>%
     secondary_flag = if_else(cruise %in% new_cruises & is.na(secondary_flag), .sec, secondary_flag),
     primary_flag   = if_else(cruise %in% new_cruises & is.na(primary_flag), .sev, primary_flag)
   )
+
+## Manual v2 changes (EN657 L1 B1, EN617 MVCO 35B, EN608)
+# EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
+# EN608 needs primary flags check
+# EN617 MVCO 35B flG 3 FLOW CALIB theres another one that has it 
+# EN627 L1 B3
+# 
 
 ## ------------------------------------------ ##
 #     Manual v2 carve-outs (explicit; audited) -----
