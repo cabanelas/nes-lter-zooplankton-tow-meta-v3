@@ -102,6 +102,26 @@ inv_all <- inv_all %>%
     TRUE ~ mesh_20_size_fract
   ))
 
+## EN627 L1 B3: bottom-hit bongo tow; only the 20um size-fraction sample was
+## kept (station later resampled; B44)
+## Was included in the published v2 inventory (knb-lter-nes.24.2) but not here
+## nor tow_meta 
+inv_all <- inv_all %>%
+  add_row(
+    source_file         = "EN627",   
+    cruise              = "EN627",
+    station             = "L1",
+    cast                = "3",
+    mesh_335_noaa       = "0",
+    mesh_335_tar_dna    = "0",
+    mesh_150_morphid    = "0",
+    mesh_150_tar_dna    = "0",
+    mesh_150_taxa_pick  = "0",
+    mesh_150_size_fract = "0",
+    mesh_20_size_fract  = "2",
+    comments            = "Hit bottom bongo; only 20um size-fraction sample kept; Station resampled."
+  )
+
 ## ------------------------------------------ ##
 #            Write -----
 ## ------------------------------------------ ##
