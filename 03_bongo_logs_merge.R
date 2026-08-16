@@ -350,13 +350,59 @@ identical(sapply(combined_dataframe[names(tow_meta_v2)], \(x) class(x)[1]),
           sapply(tow_meta_v2, \(x) class(x)[1]))   # should be TRUE
 
 ## ------------------------------------------ ##
+##  Add missing v2 tow: EN627 L1 B3 (from elog)
+## ------------------------------------------ ##
+# Hit bottom; only the 20um size-fraction sample was kept, station
+# resampled later (B44). Sample IS in the published v2 inventory (knb-lter-nes.24.2)
+# but the tow was never entered in v2 tow metadata. Add from elog.
+
+# No flowmeter/TDR/wire -> NA; 04 flags it
+en627_l1b3 <- event_log %>%
+  filter(cruise == "EN627", station == "L1",
+         gsub("^[BR]", "", cast) == "3") %>%
+  group_by(cruise, station, cast) %>%
+  summarise(
+    datetime_UTC_start = as.POSIXct("2019-02-01 22:55:00", tz = "UTC"),
+    datetime_UTC_end   = as.POSIXct("2019-02-01 23:00:00", tz = "UTC"),
+    latitude_start     = first(latitude[action == "deploy"]),
+    longitude_start    = first(longitude[action == "deploy"]),
+    latitude_end       = first(latitude[action == "recover"]),
+    longitude_end      = first(longitude[action == "recover"]),
+    depth_bottom       = 23,# bottom depth = 23; target depth = 16
+    depth_target       = 16,
+    wire_rate_out      = 10,
+    wire_rate_in       = 10,
+    .groups = "drop"
+  ) %>%
+  mutate(
+    cast        = gsub("^[BR]", "", cast),   # "B3" -> "3"
+    sample_name = "EN627_L1_B3",
+    comments    = "Hit bottom bongo; only 20um size-fraction sample kept; Station resampled.",
+    NOAA_335 = "N", DNA_335 = "N",
+    morph_ID_150 = "N", DNA_150 = "N",
+    size_fract_150 = "N", taxa_pick_150 = "N"
+  )
+
+# MUST be exactly one row
+print(en627_l1b3)
+stopifnot(nrow(en627_l1b3) == 1)
+
+# align to v2 schema + coerce types (same pattern as ring_tows)
+en_missing <- setdiff(names(tow_meta_v2), names(en627_l1b3))
+en627_l1b3[en_missing] <- NA
+en627_l1b3 <- en627_l1b3 %>%
+  select(all_of(names(tow_meta_v2))) %>%
+  mutate(across(any_of(num_cols), ~ suppressWarnings(as.numeric(.))),
+         across(any_of(chr_cols), as.character))
+
+## ------------------------------------------ ##
 ##  Combine with tow_meta_v2
 ## ------------------------------------------ ##
 
 # confirm column names match before binding
 identical(names(combined_dataframe), names(tow_meta_v2))
 
-tow_meta_v3 <- bind_rows(tow_meta_v2, combined_dataframe, ring_tows) %>%
+tow_meta_v3 <- bind_rows(tow_meta_v2, combined_dataframe, ring_tows, en627_l1b3) %>%
   arrange(datetime_UTC_start)
 
 message(glue::glue("tow_meta_v2: {nrow(tow_meta_v2)} rows"))
