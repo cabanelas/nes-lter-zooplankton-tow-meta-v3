@@ -2,7 +2,7 @@ need to add HRS2601, HRS2609, and AR105 files
 
 To-Do:
 - winch data post hrs2303?
-- renv
+- renv/session info
 - readme update with script ordering and tree 
 - need to add QAQC to the inventory csv
 - 00_packages ??? 
