@@ -1,8 +1,15 @@
-# NES-LTER Zooplankton Tow Metadata Data Package Scripts (v3)
+# NES-LTER Zooplankton Sample Inventory and Tow Metadata Data Package Scripts (v3)
 
-This repository contains the R scripts that build the **NES-LTER zooplankton tow metadata** data package (v3) submitted to the Environmental Data Initiative (EDI). The package provides tow-level metadata for zooplankton samples collected with Bongo and ring nets along the Northeast U.S. Shelf Long-Term Ecological Research (NES-LTER) Transect, ongoing since 2018.
+This repository contains the R scripts that build the **NES-LTER zooplankton sample inventory and tow metadata** files for the data package (v3) submitted to the Environmental Data Initiative (EDI). The package provides tow-level metadata for zooplankton samples collected with Bongo and ring nets along the Northeast U.S. Shelf Long-Term Ecological Research (NES-LTER) Transect, ongoing since 2018.
 
 Version 3 extends the published v2 package (which ended at cruise EN720) by adding the 2024–2026 cruises **AE2426, EN727, AR88, AR92, AR95, AR99, and HRS2601**, and adds the `depth_PX` sensor field (Kongsberg Simrad PX, starting AE2426) and separate ring-net tow logging (starting AR99).
+
+## Related repositories and data packages
+
+- **Package assembly repo** — [WHOIGit/nes-lter-zooplankton-transect-inventory](https://github.com/WHOIGit/nes-lter-zooplankton-transect-inventory): assembles and publishes the EDI package. The scripts in *this* repo generate the CSVs that feed it.
+- **v2 scripts** — [cabanelas/nes_lter_zooplankton_abundance_v2](https://github.com/cabanelas/nes_lter_zooplankton_abundance_v2)
+- **Published data package (v2)** — [knb-lter-nes.24.2 on EDI](https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2)
+- **Published data package (v3)** — _link TBD_ <!-- add knb-lter-nes.24.3 URL -->
 
 ## Repository structure
 
@@ -59,25 +66,23 @@ Review and QA (`05`, `06`) additionally use: ggthemes, cowplot (plotting); sf, m
 
 ## Data inputs
 
-Placed under `data/raw/`:
+`data/raw/`:
 
 - `bongo_logs/` — new-cruise bongo net event log datasheets
 - `sample_inventory/` — per-cruise sample-inventory workbooks (with `v2/` subfolder)
-- `elog_zoop_tows_thruHRS2601_2026-08-10.csv` — event log (from the companion [nes-lter-api-pulls](https://github.com/cabanelas/nes-lter-api-pulls) project)
-- `nes-lter-bongo-tdr-offsets.csv`, `max_depth_tdr_corrected.csv` — TDR/PX depths and offsets (from the companion `nes-lter-tdr-bongo` project)
+- `elog_zoop_tows_thruHRS2601_2026-08-10.csv` — event log (from [nes-lter-api-pulls](https://github.com/cabanelas/nes-lter-api-pulls))
+- `nes-lter-bongo-tdr-offsets.csv`, `max_depth_tdr_corrected.csv` — TDR/PX depths and offsets (from [nes-lter-tdr-bongo](https://github.com/cabanelas/nes-lter-tdr-bongo) project)
 - `winch/` — winch data (`max_wire_out`, `avg_angle`) used for the cosine-law depth fallback
-- `speed_log/`, `shipspeed_eventlog_v2.csv` — ship speed inputs
-- `nes-lter-zooplankton-tow-metadata-v2.csv` — published v2 rows carried forward
+- `speed_log/`, `shipspeed_eventlog_v2.csv` — ship speed inputs (from NES API2)
+- `nes-lter-zooplankton-tow-metadata-v2.csv` — published v2 
 
 ## Data package overview
 
-**Title.** Zooplankton Tow Metadata for Northeast U.S. Shelf Long Term Ecological Research (NES-LTER) Transect Cruises, Ongoing Since 2018
+**Title.** Zooplankton sample inventory and tow metadata for Northeast U.S. Shelf Long Term Ecological Research (NES-LTER) Transect cruises, ongoing since 2018
 
 **Version.** 3
 
 **Summary.** Tow-level metadata for physical zooplankton samples collected with Bongo (150 µm and 335 µm mesh) and ring nets (20 µm and 150 µm mesh) along the NES-LTER Transect, located south of Martha's Vineyard, Massachusetts, at standard stations L1–L11 plus MVCO. Each record documents tow position and timing, net and instrument details, depths (target, bottom, TDR, PX, and derived net-maximum depth), wire and ship-speed data, flowmeter readings and volume filtered, haul factors, sample-type indicators, and QARTOD quality flags. Sample purposes include morphological identification, DNA metabarcoding, stable isotope analysis, and size fractionation. Some early cruises were conducted in partnership with the Ocean Observatories Initiative.
-
-**Data flags.** Quality flags follow the QARTOD / IOC 54:V3 primary-level scheme: 1 = Good, 3 = Suspect/of high interest, 4 = Bad (failed critical), 9 = Missing. `primary_flag` is the worst case across all conditions on a row; `secondary_flag` gives the human-readable reason.
 
 ## Citation
 
