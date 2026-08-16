@@ -9,11 +9,8 @@ To-Do:
 - av speed lowering and raising wire
 
 QA/QC
-- check TDR package; maybe add here a final QAQC script for checking everything 
 - export col file like i did with tdr data
 - check that vol sampled was correctly calculated
--- plot vol filtered by station 
--- also compare vol filtere between 2 flowmeters 
 - check that all NAs are R NA's
 - date range by cruise
 - unique per column
@@ -29,5 +26,3 @@ NEED FIX
 == L5 B5    - splits of the sample -- fix on inventory sheet too
 == L6 B17   - splits of the sample 
 - AR92 sample splits
-
-- flowmeter values 150 net during AR95 and AR99

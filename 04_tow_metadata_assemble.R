@@ -357,18 +357,19 @@ ship_speed_wide <- ship_speed %>%
          SOG_end   = speedlog_groundspeedfwd_recover)
 
 # fill NEW cruises only; coalesce keeps v2 speeds intact
+
 tow_meta <- tow_meta %>%
   left_join(ship_speed_wide, by = c("cruise", "station", "cast", "net_type"),
             suffix = c("", "_new")) %>%
   mutate(
-    STW_start = if_else(cruise %in% new_cruises, 
-                        coalesce(STW_start_new, STW_start), STW_start),
-    STW_end   = if_else(cruise %in% new_cruises, 
-                        coalesce(STW_end_new,   STW_end),   STW_end),
-    SOG_start = if_else(cruise %in% new_cruises, 
-                        coalesce(SOG_start_new, SOG_start), SOG_start),
-    SOG_end   = if_else(cruise %in% new_cruises, 
-                        coalesce(SOG_end_new,   SOG_end),   SOG_end)
+    STW_start = if_else(cruise %in% new_cruises,
+                        abs(coalesce(STW_start_new, STW_start)), STW_start),
+    STW_end   = if_else(cruise %in% new_cruises,
+                        abs(coalesce(STW_end_new,   STW_end)),   STW_end),
+    SOG_start = if_else(cruise %in% new_cruises,
+                        abs(coalesce(SOG_start_new, SOG_start)), SOG_start),
+    SOG_end   = if_else(cruise %in% new_cruises,
+                        abs(coalesce(SOG_end_new,   SOG_end)),   SOG_end)
   ) %>%
   select(-ends_with("_new"))
 # Endeavor STW stays NA bc speedlog reports GPS-SOG, no STW
@@ -436,6 +437,21 @@ tow_meta <- tow_meta %>%
 ## ========================================================================== ##
 ## 6) VOLUME FILTERED   (keep flowmeter; V = A*T*S where NA)
 ## ========================================================================== ##
+# Volume Sampled m3 meters cubed:
+##   Flowmeter calibration factor = 0.26873
+##   Gear Area = 0.2922 m^2
+## Volume Sampled m3 = (Flowmeter revolutions) * Flow calibration factor * Gear Area (m2)
+
+# tot_flow_counts_mesh <- flowmeter_end - flowmeter_start  # Total counts
+# revolutions <- total_counts / 10  # counts to revolutions
+# total flow <- revolutions * 26873  # Standard Speed Rotor Constant
+
+#diameter_m <- 0.61  # diameter in meters
+#radius_m <- diameter_m / 2  # radius in meters (0.305)
+#A <- pi * radius_m^2  # area of the net mouth in square meters (0.2922)
+
+# haul factor as specified for EcoMon & CalCOFI cruises
+
 # Flowmeter volumes already present & verified correct (logsheet + v2) -> KEEP
 
 # When flowmeter vol == NA -> Compute  V = A * T * S 
@@ -492,16 +508,138 @@ tow_meta <- tow_meta %>%
 ## ============================================================================ ##
 ## 8) DATA FLAGS   (new cruises; v2 flags preserved)
 ## ============================================================================ ##
-## fix flag for EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
-# maybe EN608 needs primary flags check
+## QARTOD primary-level (IOC 54:V3): 1 Good, 3 Suspect/high-interest,
+## 4 Bad (failed critical), 9 Missing. 2 (not evaluated) discouraged
+## primary_flag = worst-case across all conditions on the row
+##
+## Manual v2 changes (EN657 L1 B1, EN617 MVCO 35B, EN608)
+# EN657 L1 B1, for v2 didnt have TDR so had used estimate; now have real TDR depth
+# EN608 needs primary flags check
 # EN617 MVCO 35B flG 3 FLOW CALIB theres another one that has it 
+
 # Build secondary_flag from depth/volume provenance + comments, then set
 # primary_flag = 3 where a secondary_flag exists (else 1). Only new cruises.
 
-## comments from old script:
-#secondary_flag
-# actual measurement of depth recorder (TDR) not available. 
-# Net max. depth was calculated based on wire information and bottom max depth
+## ------------------------------------------ ##
+#     Flag rules: pattern -> secondary note + severity -----
+## ------------------------------------------ ##
+# 3 = suspect / of high interest (derived or partial loss)
+# 4 = bad (failed critical: no usable / non-quantitative sample)
+flag_rules <- tribble(
+  ~pattern,                                                              ~note,                                      ~level,
+  "cod end broke|cod end came off|cod end leaked|leaking|loose mesh",    "cod end issue; some sample may be lost.",  3L,
+  #"no ring net|no 20um ring net|ring net broke|ring net ripped|ring net.*hole|lost cod end on 20um", "no ring net / 20um sample.", 3L,
+  "flowmeter for 150.*(off|not working)|flowmeter.*150um.*not working",  "150um flowmeter issue.",                   3L,
+  "spill|lost.*sample|lost ~|sample was not processed",                  "some sample lost.",                        3L,
+  "salps",                                                               "many salps.",                              3L,
+  "non.?quantitative",                                                   "non-quantitative sample.",                 4L,
+  "deployed and recovered without sample|flowmeter calibration",         "no sample.",                               4L
+)
+
+## ------------------------------------------ ##
+#     Build secondary note + severity -----
+## ------------------------------------------ ##
+# base: depth/volume provenance + hit-bottom (negation-guarded)
+# NOTE: hit bottom set to 3 usable-with-caution
+tow_meta <- tow_meta %>%
+  mutate(
+    .sec = case_when(
+      grepl("(?<!didn't )(?<!did not )(?<!not )hit bottom", comments, ignore.case = TRUE, perl = TRUE) ~ "hit bottom.",
+      is.na(depth_TDR) & is.na(depth_PX) & !is.na(.tow_depth_calc) ~
+        "Depth recorder (TDR) data not available. Net max depth calculated from wire information (cosine law).",
+      is.na(depth_TDR) & is.na(depth_PX) & is.na(.tow_depth_calc) & !is.na(depth_target) ~
+        "Target depth used for net max depth (TDR and wire data unavailable).",
+      net_type == "ring" & is.na(max_wire_out) & !is.na(depth_target) ~
+        "Target depth used for net max depth (wire data unavailable for ring net).",
+      TRUE ~ NA_character_
+    ),
+    .sev = case_when(
+      grepl("(?<!didn't )(?<!did not )(?<!not )hit bottom", comments, ignore.case = TRUE, perl = TRUE) ~ 3L,
+      !is.na(.sec) ~ 3L,      # any depth-provenance note = derived depth = suspect
+      TRUE ~ 1L
+    )
+  )
+
+# comment-driven rules: append note, bump severity to worst-case
+for (i in seq_len(nrow(flag_rules))) {
+  hit <- grepl(flag_rules$pattern[i], tow_meta$comments, ignore.case = TRUE)
+  tow_meta <- tow_meta %>%
+    mutate(
+      .sec = if_else(hit, str_squish(paste(coalesce(.sec, ""), flag_rules$note[i])), .sec),
+      .sev = pmax(.sev, if_else(hit, flag_rules$level[i], 1L))
+    )
+}
+
+# calculated-volume tows (derived, not measured) = suspect
+tow_meta <- tow_meta %>%
+  mutate(
+    .sec = if_else(.vol335_was_na | .vol150_was_na,
+                   str_squish(paste(coalesce(.sec, ""),
+                                    "Volume sampled calculated from ship speed and tow duration (flowmeter unavailable).")),
+                   .sec),
+    .sev = pmax(.sev, if_else(.vol335_was_na | .vol150_was_na, 3L, 1L)),
+    .sec = na_if(str_squish(.sec), "")
+  )
+
+# missing-data (flag 9): required field absent from every source.
+# override (not pmax) and only when no other note applies, so 9 doesn't
+# mask a more informative 4. 9 rows still get a note.
+tow_meta <- tow_meta %>%
+  mutate(
+    .missing = is.na(net_max_depth) |
+      (net_type == "bongo" & is.na(vol_filtered_335) & is.na(vol_filtered_150)),
+    .sec = if_else(.missing & is.na(.sec),
+                   #secondary_flag
+                   # actual measurement of depth recorder (TDR) not available. 
+                   # Net max. depth was calculated based on wire information and bottom max depth
+                   "Required measurement missing (net max depth or volume filtered).", .sec),
+    .sev = if_else(.missing & .sev == 1L, 9L, .sev)
+  )
+
+## ------------------------------------------ ##
+#     Apply to NEW cruises only (preserve v2) -----
+## ------------------------------------------ ##
+tow_meta <- tow_meta %>%
+  mutate(
+    secondary_flag = if_else(cruise %in% new_cruises & is.na(secondary_flag), .sec, secondary_flag),
+    primary_flag   = if_else(cruise %in% new_cruises & is.na(primary_flag), .sev, primary_flag)
+  )
+
+## ------------------------------------------ ##
+#     Manual v2 carve-outs (explicit; audited) -----
+## ------------------------------------------ ##
+# EN657 L1 B1: v2 flagged 3 (estimated depth); v3 has real TDR -> Good, clear note.
+tow_meta <- tow_meta %>%
+  mutate(
+    primary_flag   = if_else(sample_name == "EN657_L1_B1", 1, primary_flag),
+    secondary_flag = if_else(sample_name == "EN657_L1_B1", NA_character_, secondary_flag)
+  )
+# EN617 MVCO 35B / EN608: confirm before forcing values (see checks below).
+
+tow_meta %>%
+  filter(cruise %in% new_cruises, .sev != 1L) %>%
+  select(cruise, station, cast, sample_name, net_type,
+         primary_flag = .sev, secondary_flag = .sec, comments) %>%
+  arrange(desc(primary_flag), cruise, station) %>%
+  print(n = Inf, width = Inf)
+
+## ------------------------------------------ ##
+#     Drop working columns -----
+## ------------------------------------------ ##
+tow_meta <- tow_meta %>% select(-starts_with("."))
+
+## ------------------------------------------ ##
+#     Flag QA -----
+## ------------------------------------------ ##
+# every row must be flagged (QARTOD law 1); 2 discouraged
+tow_meta %>% count(primary_flag)
+tow_meta %>% filter(is.na(primary_flag)) %>% count(cruise)           # expect 0 after carve-outs
+# any non-1 flag should carry a secondary note
+tow_meta %>% filter(primary_flag != 1, is.na(secondary_flag)) %>%
+  select(cruise, station, cast, sample_name, primary_flag)
+# see the new-cruise flag distribution + example notes
+tow_meta %>% filter(cruise %in% new_cruises) %>%
+  count(primary_flag, secondary_flag) %>% arrange(primary_flag) %>% print(n = Inf)
 
 ## check comments for any other flags needed
 # 3:
@@ -517,68 +655,9 @@ tow_meta <- tow_meta %>%
 # flowmeter reading is off == flowmeter issue
 # Missing flowmeter numbers for 335um net == flowmeter issue
 
-
-
-tow_meta <- tow_meta %>%
-  mutate(
-    .sec = case_when(
-      grepl("hit bottom", comments, ignore.case = TRUE) ~ "hit bottom.",
-      is.na(depth_TDR) & is.na(depth_PX) & !is.na(.tow_depth_calc) ~
-        "Depth recorder (TDR) data not available. Net max depth was calculated based on wire information (cosine law).",
-      is.na(depth_TDR) & is.na(depth_PX) & is.na(.tow_depth_calc) & !is.na(depth_target) ~
-        "Target depth used for net max depth due to unavailable TDR data and wire information.",
-      net_type == "ring" & is.na(max_wire_out) & !is.na(depth_target) ~
-        "Target depth used for net max depth due to unavailable wire data for Ring Net.",
-      TRUE ~ NA_character_
-    )
-  )
-
-append_note <- function(sec, comments, pattern, note) {
-  hit <- grepl(pattern, comments, ignore.case = TRUE)
-  ifelse(hit, str_squish(paste(coalesce(sec, ""), note)), sec)
-}
-tow_meta <- tow_meta %>%
-  mutate(
-    .sec = append_note(.sec, comments, "tons of small salps", "many salps in this cruise."),
-    .sec = append_note(.sec, comments, "cod end broke",        "cod end broke."),
-    .sec = append_note(.sec, comments, "cod end was tangled",  "tangled cod end."),
-    .sec = append_note(.sec, comments, "Non quantitative 150", "non quantitative 150 micron sample."),
-    .sec = append_note(.sec, comments, "150um sample probably non quantitative", "non quantitative 150 micron sample."),
-    .sec = append_note(.sec, comments, "Non quantitative 335", "non quantitative 335 micron sample."),
-    .sec = append_note(.sec, comments, "Deployed and recovered without sample", "no sample."),
-    .sec = append_note(.sec, comments, "forgot to get flow start", "flowmeter issue."),
-    .sec = append_note(.sec, comments, "Flowmeter calibration", "no sample."),
-    .sec = append_note(.sec, comments, "no 20um ring net sample", "no 20um ring net sample."),
-    .sec = append_note(.sec, comments, "flowmeter reading is off", "flowmeter issue."),
-    .sec = append_note(.sec, comments, "missing flowmeter numbers for 335um net", "flowmeter issue."),
-    .sec = na_if(str_squish(.sec), "")
-  )
-
-# note calculated-volume tows in the flag
-tow_meta <- tow_meta %>%
-  mutate(
-    .sec = if_else(.vol335_was_na | .vol150_was_na,
-                   str_squish(paste(coalesce(.sec, ""),
-                     "Volume sampled calculated from ship speed and tow duration (flowmeter unavailable).")),
-                   .sec),
-    .sec = na_if(.sec, "")
-  )
-
-# apply ONLY to new-cruise rows with currently-missing flags (preserve v2)
-tow_meta <- tow_meta %>%
-  mutate(
-    secondary_flag = if_else(cruise %in% new_cruises & is.na(secondary_flag), .sec, secondary_flag),
-    primary_flag   = case_when(
-      cruise %in% new_cruises & is.na(primary_flag) & !is.na(secondary_flag) ~ 3,
-      cruise %in% new_cruises & is.na(primary_flag) &  is.na(secondary_flag) ~ 1,
-      TRUE ~ primary_flag
-    )
-  )
-
-## ------------------------------------------ ##
-#      Drop working columns -----
-## ------------------------------------------ ##
-tow_meta <- tow_meta %>% select(-starts_with("."))
+tow_meta %>% filter(cruise %in% new_cruises,
+                    grepl("forgot to get flow|missing flowmeter numbers|tangled", comments, ignore.case = TRUE)) %>%
+  select(sample_name, comments)
 
 ## ========================================================================== ##
 ## QA/QC
@@ -623,7 +702,7 @@ tow_meta %>%
   mutate(across(where(is.numeric), ~ifelse(is.infinite(.), NA, .))) %>%
   print(n = Inf)
 
-combined_dataframe %>%
+tow_meta %>%
   filter(!is.na(net_max_depth)) %>%
   group_by(cruise) %>%
   summarise(
