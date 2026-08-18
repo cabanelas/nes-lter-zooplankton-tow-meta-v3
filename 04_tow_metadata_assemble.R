@@ -939,6 +939,17 @@ tow_meta %>% distinct(primary_flag, secondary_flag) %>%
 
 # We hit bottom on the first deployment, but we were able to run bongo again. TDR was tested on CTD cast. CTD = 135.7m and TDR = 132.7m, so there is a 3m offset on TDR readings.
 # currently has flag 3 == hit bottom = should be 1 
+
+# double check:
+# EN715 5, 6, 8
+# check that sample lost is coherent == for when spilled not completely NA
+# AR63 L2 and AR38 L6 = non quant flags 
+# PX sensor stuff cant apply to old cruises
+# check NA flags + secondary 
+# what about corrected 335/150 flowmeter value & Fixed 150 um flo...
+# v2 = many salps in this cruise sould be abundant salps 
+# EN712 why so many vol sampled based on speeds
+# check en720 L11B11 vol sampled i have speeds now why not flowmeter
 ##########################################################################################
 
 ## ========================================================================== ##
