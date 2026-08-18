@@ -25,6 +25,8 @@ sample_inventory_combine.R
 data/
   raw/         # input logsheets, event log, TDR/PX, ship speed, winch, inventory workbooks
   processed/   # intermediate and published-ready CSVs written by the scripts
+output/        # files submitted to v3 EDI package
+figures/       # for checking flowmeters
 ```
 
 ## Script workflow
