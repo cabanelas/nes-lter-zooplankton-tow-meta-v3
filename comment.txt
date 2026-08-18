@@ -3,15 +3,15 @@ need to add HRS2601, HRS2609, and AR105 files
 To-Do:
 - winch data post hrs2303?
 - renv/session info
-- readme update with script ordering and tree 
-- need to add QAQC to the inventory csv
+- add QAQC in R for the inventory csv
 - 00_packages ??? 
 - av speed lowering and raising wire
+- heatmap cruise data available sample type per cruise
+- after checking flowmeters may have to go back and adjust volume if any bad
 
 QA/QC
 - export col file like i did with tdr data
 - check that vol sampled was correctly calculated
-- check that all NAs are R NA's
 - date range by cruise
 - unique per column
 - check comments 
@@ -19,10 +19,11 @@ QA/QC
 - can bring in v2 columns to check names/order goal
 - sample name properly constructed
 - tow duration looks reasonable 
-- Need to revisit 0s and NANS
+- Need to revisit 0s and NANS; check that all NAs are R NA's
 
 NEED FIX
 - AE2426 
 == L5 B5    - splits of the sample -- fix on inventory sheet too
 == L6 B17   - splits of the sample 
-- AR92 sample splits
+- AR92        sample splits
+- flowmeter AR92, AR95, AR99
