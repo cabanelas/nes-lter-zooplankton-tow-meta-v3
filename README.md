@@ -86,6 +86,12 @@ Review and QA (`05`, `06`) additionally use: ggthemes, cowplot (plotting); sf, m
 
 **Summary.** Tow-level metadata for physical zooplankton samples collected with Bongo (150 µm and 335 µm mesh) and ring nets (20 µm and 150 µm mesh) along the NES-LTER Transect, located south of Martha's Vineyard, Massachusetts, at standard stations L1–L11 plus MVCO. Each record documents tow position and timing, net and instrument details, depths (target, bottom, TDR, PX, and derived net-maximum depth), wire and ship-speed data, flowmeter readings and volume filtered, haul factors, sample-type indicators, and QARTOD quality flags. Sample purposes include morphological identification, DNA metabarcoding, stable isotope analysis, and size fractionation. Some early cruises were conducted in partnership with the Ocean Observatories Initiative.
 
+## Sample-Splitting Protocol
+
+![Sample-splitting protocol diagram](figures/NESLTER_zooplankton_splitting_diagram.svg)
+
+Bongo (335 µm, 150 µm) and ring-net (20 µm) samples are split and preserved as shown above.
+
 ## Citation
 
 Northeast U.S. Shelf Long-Term Ecological Research (NES-LTER). (202X). Zooplankton tow metadata for Northeast U.S. Shelf Long Term Ecological Research (NES-LTER) Transect cruises, ongoing since 2018. v3. Environmental Data Initiative.
