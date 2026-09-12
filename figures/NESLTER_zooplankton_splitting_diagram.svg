@@ -1,0 +1,356 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:c2pa="http://c2pa.org/manifest" viewBox="0 0 1440 1080">
+  <!-- Generator: Adobe Illustrator 30.2.1, SVG Export Plug-In . SVG Version: 2.1.1 Build 1)  -->
+  <defs>
+    <style>
+      .st0, .st1, .st2, .st3, .st4, .st5, .st6, .st7, .st8, .st9, .st10, .st11, .st12, .st13, .st14, .st15, .st16, .st17, .st18, .st19, .st20, .st21, .st22, .st23, .st24, .st25 {
+        isolation: isolate;
+      }
+
+      .st0, .st1, .st4, .st6, .st7, .st8, .st9, .st10, .st11, .st12, .st15, .st16, .st17, .st18, .st19, .st20, .st21, .st22, .st25 {
+        font-family: Arial-BoldMT, Arial;
+        font-weight: 700;
+      }
+
+      .st0, .st4, .st12 {
+        letter-spacing: .05em;
+      }
+
+      .st0, .st4, .st12, .st15 {
+        font-size: 24px;
+      }
+
+      .st0, .st15, .st16, .st26, .st18, .st20 {
+        fill: #2c6e9e;
+      }
+
+      .st27 {
+        letter-spacing: 0em;
+      }
+
+      .st27, .st6, .st28, .st9, .st10, .st13, .st16, .st29 {
+        font-size: 21px;
+      }
+
+      .st1, .st3, .st8, .st30, .st17, .st19, .st20, .st25 {
+        font-size: 18px;
+      }
+
+      .st2, .st5, .st13, .st23, .st24 {
+        font-family: ArialMT, Arial;
+      }
+
+      .st2, .st5, .st23 {
+        fill: #6b7280;
+      }
+
+      .st2, .st31 {
+        font-size: 12px;
+      }
+
+      .st3 {
+        fill: #9aa5b1;
+      }
+
+      .st3, .st14 {
+        font-family: Arial-ItalicMT, Arial;
+        font-style: italic;
+      }
+
+      .st32 {
+        fill: #f4f5f7;
+        stroke: #c2cad4;
+        stroke-width: 1.5px;
+      }
+
+      .st33 {
+        fill: #fbfcfd;
+      }
+
+      .st33, .st34, .st35, .st36, .st37, .st38, .st39 {
+        stroke-width: 1.4px;
+      }
+
+      .st33, .st35, .st37 {
+        stroke: #edeff2;
+      }
+
+      .st40, .st41 {
+        font-size: 11.5px;
+      }
+
+      .st42, .st4, .st6, .st8, .st29 {
+        fill: #6a4c93;
+      }
+
+      .st5, .st43, .st11, .st44, .st24 {
+        font-size: 14px;
+      }
+
+      .st45, .st46, .st34, .st36, .st47, .st48 {
+        stroke: #2c6e9e;
+      }
+
+      .st45, .st46, .st49 {
+        stroke-width: 1.7px;
+      }
+
+      .st45, .st47 {
+        fill: #e3eef6;
+      }
+
+      .st50, .st51, .st38, .st39 {
+        stroke: #6a4c93;
+      }
+
+      .st50, .st36, .st52, .st37, .st48, .st38 {
+        fill: none;
+      }
+
+      .st50, .st52, .st48 {
+        stroke-width: 2px;
+      }
+
+      .st53, .st46, .st34, .st35, .st49, .st21, .st39, .st25 {
+        fill: #fff;
+      }
+
+      .st43, .st10, .st11, .st22, .st24 {
+        fill: #1f2933;
+      }
+
+      .st9, .st12, .st17, .st54 {
+        fill: #2e7d5b;
+      }
+
+      .st55 {
+        fill: #e6f1eb;
+      }
+
+      .st55, .st51, .st47 {
+        stroke-width: 2.4px;
+      }
+
+      .st55, .st52, .st49 {
+        stroke: #2e7d5b;
+      }
+
+      .st41 {
+        letter-spacing: 0em;
+      }
+
+      .st14 {
+        font-size: 15px;
+      }
+
+      .st51 {
+        fill: #ede7f4;
+      }
+
+      .st36, .st38 {
+        stroke-dasharray: 4 4;
+      }
+
+      .st18 {
+        font-size: 17px;
+      }
+
+      .st19 {
+        fill: #3e4c59;
+      }
+
+      .st21 {
+        font-size: 20.17px;
+      }
+
+      .st22 {
+        font-size: 36px;
+      }
+
+      .st23 {
+        font-size: 15.68px;
+      }
+    </style>
+  </defs>
+  <rect class="st53" width="1440" height="1080"/>
+  <text class="st22" transform="translate(60 56)"><tspan x="0" y="0">NES-LTER Zooplankton — Sample-Splitting Protocol</tspan></text>
+  <text class="st13" transform="translate(60 82)"><tspan x="0" y="0">bongo (335 µm / 150 µm) and ring net (20 µm) tows</tspan></text>
+  <path class="st37" d="M60,98h1320"/>
+  <rect class="st33" x="48" y="118" width="1344" height="208" rx="14" ry="14"/>
+  <rect class="st33" x="48" y="338" width="1344" height="430" rx="14" ry="14"/>
+  <rect class="st33" x="48" y="780" width="1344" height="210" rx="14" ry="14"/>
+  <text class="st12" transform="translate(70 142)"><tspan x="0" y="0">BONGO · 335 µm</tspan></text>
+  <text class="st0" transform="translate(70 362)"><tspan x="0" y="0">BONGO · 150 µm</tspan></text>
+  <text class="st4" transform="translate(70 804)"><tspan x="0" y="0">RING NET · 20 µm</tspan></text>
+  <g id="bongo-335">
+    <circle class="st55" cx="130" cy="223" r="42"/>
+    <text class="st9" transform="translate(94.34 227)"><tspan x="0" y="0">335 µm</tspan></text>
+    <text/>
+    <rect class="st32" x="213" y="203" width="74" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(228.92 227.5)"><tspan x="0" y="0">Split</tspan></text>
+    <rect class="st32" x="363" y="248" width="74" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(380.92 272.5)"><tspan x="0" y="0">Split</tspan></text>
+    <rect class="st32" x="356" y="158" width="88" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(361.19 182.5)"><tspan x="0" y="0">Combine</tspan></text>
+    <rect class="st49" x="532" y="156" width="176" height="44" rx="8" ry="8"/>
+    <text class="st11" transform="translate(548.61 176)"><tspan x="0" y="0">Preserve · 5% formalin</tspan></text>
+    <text class="st2" transform="translate(586.68 191)"><tspan x="0" y="0">glass jar (1 L)</tspan></text>
+    <rect class="st49" x="532" y="246" width="176" height="44" rx="8" ry="8"/>
+    <text class="st11" transform="translate(547.56 266)"><tspan x="0" y="0">Preserve · 95% ethanol</tspan></text>
+    <text class="st2" transform="translate(599.52 281)"><tspan x="0" y="0">glass jar</tspan></text>
+    <circle class="st54" cx="830" cy="178" r="15"/>
+    <text class="st25" transform="translate(825.83 184)"><tspan x="0" y="0">1</tspan></text>
+    <text class="st5" transform="translate(856 175)"><tspan x="0" y="0">NOAA — Poland</tspan></text>
+    <text class="st7" transform="translate(856 194)"><tspan class="st30" x="0" y="0">MorphID</tspan><tspan class="st44" x="72.98" y="0" xml:space="preserve"> · </tspan><tspan class="st28" x="85.43" y="0">¾</tspan></text>
+    <circle class="st54" cx="830" cy="268" r="15"/>
+    <text class="st25" transform="translate(825.83 274)"><tspan x="0" y="0">2</tspan></text>
+    <text class="st5" transform="translate(856 265)"><tspan x="0" y="0">Rynearson Lab</tspan></text>
+    <text class="st7" transform="translate(856 284)"><tspan class="st30" x="0" y="0">DNA barcoding</tspan><tspan class="st44" x="131" y="0" xml:space="preserve"> · </tspan><tspan class="st28" x="143.44" y="0">¼</tspan></text>
+    <path class="st52" d="M172,223h34.6"/>
+    <path class="st54" d="M213,223l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M287,223h37.5v-45h25.1"/>
+    <path class="st54" d="M356,178l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M287,223h38v45h31.6"/>
+    <path class="st54" d="M363,268l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M400,248v-41.6"/>
+    <path class="st54" d="M400,200l4,8h-8l4-8Z"/>
+    <path class="st52" d="M437,268h88.6"/>
+    <path class="st54" d="M532,268l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M444,178h81.6"/>
+    <path class="st54" d="M532,178l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M708,178h99.6"/>
+    <path class="st54" d="M814,178l-8,4v-8l8,4Z"/>
+    <path class="st52" d="M708,268h99.6"/>
+    <path class="st54" d="M814,268l-8,4v-8l8,4Z"/>
+    <text class="st17" transform="translate(297 202)"><tspan x="0" y="0">½</tspan></text>
+    <text class="st17" transform="translate(297 252)"><tspan x="0" y="0">½</tspan></text>
+    <text class="st17" transform="translate(408 232)"><tspan x="0" y="0">¼</tspan></text>
+    <text class="st17" transform="translate(468 287)"><tspan x="0" y="0">¼</tspan></text>
+  </g>
+  <g id="bongo-150">
+    <circle class="st47" cx="130" cy="500" r="42"/>
+    <text class="st16" transform="translate(94.14 504)"><tspan x="0" y="0">150 µm </tspan></text>
+    <text/>
+    <rect class="st32" x="213" y="480" width="74" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(228.92 504.5)"><tspan x="0" y="0">Split</tspan></text>
+    <rect class="st32" x="363" y="420" width="74" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(379.92 444.5)"><tspan x="0" y="0">Split</tspan></text>
+    <rect class="st32" x="363" y="600" width="74" height="40" rx="8" ry="8"/>
+    <text class="st19" transform="translate(379.92 624.5)"><tspan x="0" y="0">Split</tspan></text>
+    <rect class="st46" x="532" y="378" width="176" height="44" rx="8" ry="8"/>
+    <text class="st11" transform="translate(546.56 404.5)"><tspan x="0" y="0">Preserve · 95% ethanol</tspan></text>
+    <rect class="st46" x="532" y="458" width="176" height="44" rx="8" ry="8"/>
+    <text class="st11" transform="translate(546.56 478)"><tspan x="0" y="0">Preserve · 95% ethanol</tspan></text>
+    <text class="st2" transform="translate(602.52 493)"><tspan x="0" y="0">glass jar</tspan></text>
+    <rect class="st46" x="532" y="538" width="176" height="44" rx="8" ry="8"/>
+    <text class="st11" transform="translate(542.88 564.5)"><tspan x="0" y="0">Preserve · freeze −20 °C</tspan></text>
+    <rect class="st45" x="498" y="668" width="124" height="44" rx="8" ry="8"/>
+    <text class="st20" transform="translate(526.34 687)"><tspan x="0" y="0">Fraction</tspan></text>
+    <text class="st20" transform="translate(530.16 705)"><tspan x="0" y="0">by size</tspan></text>
+    <circle class="st26" cx="830" cy="400" r="15"/>
+    <text class="st25" transform="translate(825.83 406)"><tspan x="0" y="0">1</tspan></text>
+    <text class="st5" transform="translate(856 397)"><tspan x="0" y="0">Llopiz Lab</tspan></text>
+    <text class="st7" transform="translate(856 416)"><tspan class="st30" x="0" y="0">MorphID</tspan><tspan class="st40" x="72.98" y="0" xml:space="preserve"> · </tspan><tspan class="st28" x="83.2" y="0">¼</tspan></text>
+    <circle class="st26" cx="830" cy="480" r="15"/>
+    <text class="st25" transform="translate(825.83 486)"><tspan x="0" y="0">2</tspan></text>
+    <text class="st5" transform="translate(856 477)"><tspan x="0" y="0">Rynearson Lab</tspan></text>
+    <text class="st7" transform="translate(856 496)"><tspan class="st30" x="0" y="0">DNA barcoding</tspan><tspan class="st40" x="131" y="0"> </tspan><tspan class="st31" x="134.2" y="0">·</tspan><tspan class="st41" x="138.19" y="0"> </tspan><tspan class="st28" x="141.39" y="0">¼</tspan></text>
+    <circle class="st26" cx="830" cy="560" r="15"/>
+    <text class="st25" transform="translate(825.83 566)"><tspan x="0" y="0">3</tspan></text>
+    <text class="st5" transform="translate(856 557)"><tspan x="0" y="0">Llopiz Lab</tspan></text>
+    <text class="st7" transform="translate(856 576)"><tspan class="st30" x="0" y="0">Taxa picking</tspan><tspan class="st40" x="109.04" y="0"> </tspan><tspan class="st31" x="112.23" y="0">·</tspan><tspan class="st27" x="116.23" y="0" xml:space="preserve"> ¼</tspan></text>
+    <path class="st48" d="M172,500h34.6"/>
+    <path class="st26" d="M213,499.22l-8,3.22v-6.44l8,3.22Z"/>
+    <path class="st48" d="M287,500h38v-60h31.6"/>
+    <path class="st26" d="M363,440l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M287,500h38v120h31.6"/>
+    <path class="st26" d="M363,620l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M437,440h47.5v-40h41.1"/>
+    <path class="st26" d="M532,400l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M437,440h47.5v40h41.1"/>
+    <path class="st26" d="M532,480l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M437,620h47.5v-60h41.1"/>
+    <path class="st26" d="M532,560l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M437,620h123v48h-6.4"/>
+    <path class="st48" d="M708,400h99.6"/>
+    <path class="st26" d="M814,400l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M708,480h99.6"/>
+    <path class="st26" d="M814,480l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M708,560h99.6"/>
+    <path class="st26" d="M814,560l-8,4v-8l8,4Z"/>
+    <text class="st20" transform="translate(303 470)"><tspan x="0" y="0">½</tspan></text>
+    <text class="st20" transform="translate(303 548)"><tspan x="0" y="0">½</tspan></text>
+    <text class="st20" transform="translate(453 420)"><tspan x="0" y="0">¼</tspan></text>
+    <text class="st20" transform="translate(453 468)"><tspan x="0" y="0">¼</tspan></text>
+    <text class="st20" transform="translate(453 600)"><tspan x="0" y="0">¼</tspan></text>
+    <text class="st20" transform="translate(453 648)"><tspan x="0" y="0">¼</tspan></text>
+    <path class="st34" d="M669,631h82c8.28,0,15,6.72,15,15h0c0,8.28-6.72,15-15,15h-82c-8.28,0-15-6.72-15-15h0c0-8.28,6.72-15,15-15Z"/>
+    <text class="st20" transform="translate(671.83 652)"><tspan x="0" y="0">&gt;1000 µm</tspan></text>
+    <path class="st48" d="M650,690h-15.37v-44h1.32"/>
+    <path class="st26" d="M654,646l-8,4v-8l8,4Z"/>
+    <path class="st34" d="M669,675h82c8.28,0,15,6.72,15,15h0c0,8.28-6.72,15-15,15h-82c-8.28,0-15-6.72-15-15h0c0-8.28,6.72-15,15-15Z"/>
+    <text class="st18" transform="translate(655.39 696)"><tspan x="0" y="0">1000–500 µm</tspan></text>
+    <path class="st48" d="M622,690h28-2.4"/>
+    <path class="st26" d="M654,690l-8,4v-8l8,4Z"/>
+    <path class="st34" d="M669,719h82c8.28,0,15,6.72,15,15h0c0,8.28-6.72,15-15,15h-82c-8.28,0-15-6.72-15-15h0c0-8.28,6.72-15,15-15Z"/>
+    <text class="st20" transform="translate(659.59 740)"><tspan x="0" y="0">500–200 µm</tspan></text>
+    <path class="st48" d="M646.37,690h-11.18v44h.96"/>
+    <path class="st26" d="M654,734l-8,4v-8l8,4Z"/>
+    <rect class="st36" x="852" y="631" width="150" height="118" rx="10" ry="10"/>
+    <text class="st15" transform="translate(874.7 667)"><tspan x="0" y="0">Preserve</tspan><tspan x="16.03" y="28.8">freeze</tspan><tspan x="13.56" y="57.6">−20 °C</tspan></text>
+    <path class="st48" d="M766,646h79.6"/>
+    <path class="st26" d="M852,646l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M766,690h79.6"/>
+    <path class="st26" d="M852,690l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M766,734h79.6"/>
+    <path class="st26" d="M852,734l-8,4v-8l8,4Z"/>
+    <path class="st48" d="M1002,690h50.6"/>
+    <path class="st26" d="M1059,690l-8,4v-8l8,4Z"/>
+    <circle class="st26" cx="1075" cy="690" r="15"/>
+    <text class="st25" transform="translate(1069.83 696)"><tspan x="0" y="0">4</tspan></text>
+    <text class="st5" transform="translate(1101 687)"><tspan x="0" y="0">Llopiz Lab</tspan></text>
+    <text class="st7" transform="translate(1101 706)"><tspan class="st30" x="0" y="0">Stable isotopes</tspan><tspan class="st40" x="133.03" y="0" xml:space="preserve"> · </tspan><tspan class="st28" x="143.25" y="0">¼</tspan></text>
+    <text class="st3" transform="translate(465.05 734)"><tspan x="0" y="0">&lt; 200 µm → discard</tspan></text>
+    <path class="st26" d="M560.41,667.52l4.14-8.64h-8.28s4.14,8.64,4.14,8.64Z"/>
+    <path class="st48" d="M635,646h12.14"/>
+    <path class="st48" d="M634.71,734h12.14"/>
+    <text class="st7" transform="translate(380.68 959.74)"><tspan class="st29" x="0" y="0">Preserve </tspan><tspan class="st43" x="94.58" y="0">·</tspan><tspan class="st29" x="99.24" y="0" xml:space="preserve"> freeze −20 °C</tspan></text>
+  </g>
+  <g id="ring-net">
+    <circle class="st51" cx="130" cy="888" r="42"/>
+    <text class="st6" transform="translate(100.55 892)"><tspan x="0" y="0">20 µm</tspan></text>
+    <text/>
+    <path class="st39" d="M340,869h92c8.84,0,16,7.16,16,16h0c0,8.84-7.16,16-16,16h-92c-8.84,0-16-1.83-16-16h0c0-8.84,7.16-16,16-16Z"/>
+    <text class="st8" transform="translate(337.18 891)"><tspan x="0" y="0">200–100 µm</tspan></text>
+    <path class="st39" d="M562,872h92c8.84,0,16,7.16,16,16h0c0,8.84-7.16,16-16,16h-92c-8.84,0-16-7.16-16-16h0c0-8.84,7.16-16,16-16Z"/>
+    <text class="st8" transform="translate(565.52 893)"><tspan x="0" y="0">100–20 µm</tspan></text>
+    <text/>
+    <circle class="st42" cx="759.27" cy="887" r="15"/>
+    <text class="st21" transform="translate(753.8 893.88)"><tspan x="0" y="0">4</tspan></text>
+    <text class="st23" transform="translate(785.44 886.45)"><tspan x="0" y="0">Llopiz Lab</tspan></text>
+    <text class="st1" transform="translate(784 905)"><tspan x="0" y="0">Stable isotopes · size-fractionated solids</tspan></text>
+    <path class="st50" d="M669.1,887.55h63.6"/>
+    <path class="st42" d="M390,929.2l-4-8h8s-4,8-4,8Z"/>
+    <path class="st50" d="M390,901v12.77h0v10.43"/>
+    <path class="st42" d="M740,887l-8,4v-8l8,4Z"/>
+    <text class="st14" transform="translate(180.04 881)"><tspan x="0" y="0">200 → 100 µm sieve</tspan></text>
+    <text class="st14" transform="translate(454 882.73)"><tspan x="0" y="0">20 µm sieve</tspan></text>
+    <path class="st42" d="M322,887.55l-8,3.89v-7.79l8,3.89Z"/>
+    <path class="st50" d="M172,887.93h142"/>
+    <path class="st50" d="M448,887.55h91"/>
+    <path class="st42" d="M544.6,888l-8,4v-8l8,4Z"/>
+    <path class="st50" d="M602.9,905v12.77h0v10.43"/>
+    <path class="st42" d="M602.9,928.2l-4-8h8s-4,8-4,8Z"/>
+  </g>
+  <g id="legend">
+    <rect class="st35" x="1189" y="150" width="191" height="138" rx="12" ry="12"/>
+    <text class="st10" transform="translate(1209 180)"><tspan x="0" y="0">Legend</tspan></text>
+    <rect class="st54" x="1209" y="197" width="22" height="14" rx="4" ry="4"/>
+    <text class="st24" transform="translate(1241 208)"><tspan x="0" y="0">Bongo 335 µm</tspan></text>
+    <rect class="st26" x="1209" y="225" width="22" height="14" rx="4" ry="4"/>
+    <text class="st24" transform="translate(1241 236)"><tspan x="0" y="0">Bongo 150 µm</tspan></text>
+    <rect class="st42" x="1209" y="253" width="22" height="14" rx="4" ry="4"/>
+    <text class="st24" transform="translate(1241 264)"><tspan x="0" y="0">Ring net 20 µm</tspan></text>
+  </g>
+  <rect class="st38" x="343.45" y="930" width="301.27" height="46.55" rx="10" ry="10"/>
+</svg>
