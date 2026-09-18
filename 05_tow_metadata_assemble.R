@@ -1,5 +1,5 @@
 ################################################################################
-## Script:  04_tow_metadata_assemble.R
+## Script:  05_tow_metadata_assemble.R
 ## Project: NES-LTER Zooplankton Inventory Data Package v3
 ## Author:  Alexandra C. Cabanelas
 ##
@@ -25,7 +25,7 @@
 ##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
 ##   - sample_inventory_combined-YYYYMMDD.csv  (sample_inventory_combine.R)
 ##  (data/raw/):
-##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv     (nes-lter-api-pulls)
+##   - elog_zoop_tows_thruHRS2609_2026-09-11.csv     (nes-lter-api-pulls)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
 ##   - nes-lter-bongo-tdr-offsets.csv             (nes-lter-tdr-bongo)
 ##          https://github.com/cabanelas/nes-lter-tdr-bongo
@@ -52,7 +52,8 @@ A_MOUTH      <- pi * (NET_DIAM_M/2)^2 # 0.2922 m^2
 KT_TO_MS     <- 0.514444              # knots -> m/s
 
 # new v3 cruises that need derived columns filled (v2 rows preserved)
-new_cruises <- c("AE2426", "EN727", "AR88", "AR92", "AR95", "AR99", "HRS2601")
+new_cruises <- c("AE2426", "EN727", "AR88", "AR92", "AR95", "AR99", "HRS2601",
+                 "HRS2609")
 
 # TRUE  = offset-correct depth_TDR for ALL cruises (v2 included); deliberate v2 edit
 # FALSE = only new cruises get corrected depth_TDR; v2 depth_TDR left as published
@@ -78,7 +79,7 @@ tow_meta <- readRDS(latest_bongolog)
 
 ## --- event log (for coordinates) --- ##
 event_log <- read_csv(here("data", "raw",
-                           "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
 
 ## --- PX + TDR --- ##
 tdr <- read_csv(here("data", "raw", "nes-lter-bongo-tdr-offsets.csv"))

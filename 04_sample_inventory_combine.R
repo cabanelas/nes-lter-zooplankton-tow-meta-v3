@@ -1,5 +1,5 @@
 ################################################################################
-## Script:  sample_inventory_combine.R
+## Script:  04_sample_inventory_combine.R
 ## Project: NES-LTER Zooplankton Inventory Data Package v3
 ## Author:  Alexandra C. Cabanelas
 ##
