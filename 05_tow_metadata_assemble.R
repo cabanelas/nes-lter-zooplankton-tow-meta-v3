@@ -23,7 +23,7 @@
 ##  (data/processed/):
 ##   - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
 ##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
-##   - sample_inventory_combined-YYYYMMDD.csv  (sample_inventory_combine.R)
+##   - sample_inventory_combined-YYYYMMDD.csv  (04_sample_inventory_combine.R)
 ##  (data/raw/):
 ##   - elog_zoop_tows_thruHRS2609_2026-09-11.csv     (nes-lter-api-pulls)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
