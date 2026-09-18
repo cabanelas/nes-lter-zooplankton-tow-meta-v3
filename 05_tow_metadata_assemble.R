@@ -21,13 +21,13 @@
 ##
 ## Inputs (data/):
 ##  (data/processed/):
-##   - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
+## !!!UPDATE  - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
 ##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
 ##   - sample_inventory_combined-YYYYMMDD.csv  (04_sample_inventory_combine.R)
 ##  (data/raw/):
-##   - elog_zoop_tows_thruHRS2609_2026-09-11.csv     (nes-lter-api-pulls)
+##   - elog_zoop_tows_thruHRS2609_2026-09-18.csv  (nes-lter-api-pulls)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
-##   - nes-lter-bongo-tdr-offsets.csv             (nes-lter-tdr-bongo)
+## !!!UPDATE   - nes-lter-bongo-tdr-offsets.csv             (nes-lter-tdr-bongo)
 ##          https://github.com/cabanelas/nes-lter-tdr-bongo
 ##
 ## Outputs (data/processed/):
@@ -79,7 +79,7 @@ tow_meta <- readRDS(latest_bongolog)
 
 ## --- event log (for coordinates) --- ##
 event_log <- read_csv(here("data", "raw",
-                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-18.csv"))
 
 ## --- PX + TDR --- ##
 tdr <- read_csv(here("data", "raw", "nes-lter-bongo-tdr-offsets.csv"))

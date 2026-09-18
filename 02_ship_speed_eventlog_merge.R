@@ -7,9 +7,10 @@
 ##          event log for the v3 EDI package (2018-2026 cruises, thru HRS2609)
 ##
 ## Inputs (data/):
-##   - processed/raw_ship_speed_underwayrestapi_20260810.csv (01_ship_speed_pull.R)
-##   - raw/elog_zoop_tows_thruHRS2609_2026-09-18.csv         (nes-lter-api-pulls.Rproj)
-##          https://github.com/cabanelas/nes-lter-api-pulls
+##  - processed/raw_ship_speed_underwayrestapi_20260918.csv (01_ship_speed_pull.R)
+##  - raw/elog_zoop_tows_thruHRS2609_2026-09-18.csv         (nes-lter-api-pulls.Rproj)
+##    https://github.com/cabanelas/nes-lter-api-pulls
+##  - raw/shipspeed_eventlog_v2.csv
 ##
 ## Outputs (output/):
 ##   - shipspeed_eventlog_v3.csv
