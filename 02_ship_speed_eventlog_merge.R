@@ -4,11 +4,11 @@
 ## Author:  Alexandra C. Cabanelas
 ##
 ## Purpose: Merge underway ship speed (STW / SOG) onto the bongo/ring-net
-##          event log for the v3 EDI package (2018-2026 cruises, thru HRS2601)
+##          event log for the v3 EDI package (2018-2026 cruises, thru HRS2609)
 ##
 ## Inputs (data/):
 ##   - processed/raw_ship_speed_underwayrestapi_20260810.csv (01_ship_speed_pull.R)
-##   - raw/elog_zoop_tows_thruHRS2601_2026-08-10.csv         (nes-lter-api-pulls.Rproj)
+##   - raw/elog_zoop_tows_thruHRS2609_2026-09-11.csv         (nes-lter-api-pulls.Rproj)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
 ##
 ## Outputs (output/):
@@ -39,9 +39,9 @@ latest_ship_speed <- sort(list.files(
 ship_speed <- read_csv(latest_ship_speed)
 
 ## --- EVENT LOG DATA --- ##
-# from nes-lter-api-pulls.Rproj download 10-AUG-2026
+# from nes-lter-api-pulls.Rproj download 11-SEP-2026
 event_log <- read_csv(here("data", "raw", 
-                           "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
 
 ## ------------------------------------------ ##
 #      Build minute-resolution join key ----
@@ -90,7 +90,8 @@ event_log %>%
   select(cruise) %>%
   distinct() %>% print(n=40)
 
-new_cruises <- c("AE2426", "EN720", "EN727", "AR88", "AR92", "AR95", "AR99", "HRS2601")
+new_cruises <- c("AE2426", "EN720", "EN727", "AR88", "AR92", "AR95", "AR99", 
+                 "HRS2601", "HRS2609")
 
 # per-cruise coverage: matched but speed still NA = no data in underway
 merged_data %>%

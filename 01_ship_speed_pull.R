@@ -6,7 +6,7 @@
 ## Purpose: Get underway ship speed data from NES-LTER cruises via 
 ##           NES LTER REST API. Included in the underway data. 
 ##
-##  cruises: EN720, AE2426, EN727, AR88, AR92, AR95, AR99, HRS2601
+##  cruises: EN720, AE2426, EN727, AR88, AR92, AR95, AR99, HRS2601, HRS2609
 ##        v2 had up to EN720 (but ship speed wasnt available yet)
 ##
 ## Inputs (data/raw/):
@@ -42,7 +42,7 @@ url_prefix <- "https://nes-lter-api.whoi.edu"
 file_urls <- paste0(url_prefix, "/api/underway/",
                     c("en720", #was not available as of 27-SEP; so doing now
                       "ae2426","en727","ar88","ar92","ar95","ar99",
-                      "hrs2601"), #hrs2609; ar105
+                      "hrs2601", "hrs2609"), #ar105
                     ".csv")
 
 ## --- to see which cols are available --- ##
