@@ -470,6 +470,9 @@ tow_meta_v3 <- tow_meta_v3 %>%
         as.POSIXct("2018-11-13 00:59:00", tz = "UTC"),
       cruise == "AR32" & station == "L7" & cast == "5"  ~
         as.POSIXct("2018-11-13 03:06:00", tz = "UTC"),
+      # HRS2601 B20 - start and end times should be 05:57-06:04
+      cruise == "HRS2601" & station == "MVCO" & cast == "20" ~
+        as.POSIXct("2026-04-27 06:04:00", tz = "UTC"),
       TRUE ~ datetime_UTC_end
     ),
     datetime_UTC_start = case_when(
@@ -478,6 +481,9 @@ tow_meta_v3 <- tow_meta_v3 %>%
       # fixes to v2: AR61B
       cruise == "AR61B" & station == "L10" & cast == "7" ~
         as.POSIXct("2021-11-09 16:49:00", tz = "UTC"),
+      # HRS2601 B20 - start and end times should be 05:57-06:04
+      cruise == "HRS2601" & station == "MVCO" & cast == "20" ~
+        as.POSIXct("2026-04-27 05:57:00", tz = "UTC"),
       TRUE ~ datetime_UTC_start
     ),
     # fix depth target typo
