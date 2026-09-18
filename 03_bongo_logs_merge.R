@@ -17,7 +17,7 @@
 ##          https://github.com/cabanelas/nes_lter_zooplankton_inventory_v2
 ##            v2 package downloaded: 07-NOV-2025
 ##    https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2
-##   - elog_zoop_tows_thruHRS2609_2026-09-11.csv (nes-lter-api-pulls.Rproj)
+##   - elog_zoop_tows_thruHRS2609_2026-09-18.csv (nes-lter-api-pulls.Rproj)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
 ##
 ## Outputs (data/processed/):
@@ -93,10 +93,10 @@ combined_dataframe <- bind_rows(list_of_dataframes)
 class(combined_dataframe)
 combined_dataframe <- as.data.frame(combined_dataframe)
 
-## --- from nes-lter-api-pulls.Rproj download 11-SEP-2026 ---
+## --- from nes-lter-api-pulls.Rproj download 18-SEP-2026 ---
 # to add ring net entries ar99 and newer (separate ring net tows)
 event_log <- read_csv(here("data", "raw",
-                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-18.csv"))
 
 ## ------------------------------------------ ##
 ##  Clean combined_dataframe for rbind with tow_meta_v2

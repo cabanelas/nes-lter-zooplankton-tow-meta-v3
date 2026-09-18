@@ -8,7 +8,7 @@
 ##
 ## Inputs (data/):
 ##   - processed/raw_ship_speed_underwayrestapi_20260810.csv (01_ship_speed_pull.R)
-##   - raw/elog_zoop_tows_thruHRS2609_2026-09-11.csv         (nes-lter-api-pulls.Rproj)
+##   - raw/elog_zoop_tows_thruHRS2609_2026-09-18.csv         (nes-lter-api-pulls.Rproj)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
 ##
 ## Outputs (output/):
@@ -39,9 +39,9 @@ latest_ship_speed <- sort(list.files(
 ship_speed <- read_csv(latest_ship_speed)
 
 ## --- EVENT LOG DATA --- ##
-# from nes-lter-api-pulls.Rproj download 11-SEP-2026
+# from nes-lter-api-pulls.Rproj download 18-SEP-2026
 event_log <- read_csv(here("data", "raw", 
-                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-18.csv"))
 
 ## ------------------------------------------ ##
 #      Build minute-resolution join key ----
