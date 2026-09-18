@@ -7,7 +7,7 @@
 ##          (2024-2026) with published v2 inventory metadata, producing
 ##          a combined dataset for v3 EDI package (2018-2026 cruises).
 ##
-##  This adds data from AE2426 (fall 2024) to CRUISENAME
+##  This adds data from AE2426 (fall 2024) to HRS2609
 ##        v2 had up to EN720
 ##
 ## Inputs (data/raw/):
@@ -17,7 +17,7 @@
 ##          https://github.com/cabanelas/nes_lter_zooplankton_inventory_v2
 ##            v2 package downloaded: 07-NOV-2025
 ##    https://portal.edirepository.org/nis/mapbrowse?packageid=knb-lter-nes.24.2
-##   - elog_zoop_tows_thruHRS2601_2026-08-10.csv (nes-lter-api-pulls.Rproj)
+##   - elog_zoop_tows_thruHRS2609_2026-09-11.csv (nes-lter-api-pulls.Rproj)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
 ##
 ## Outputs (data/processed/):
@@ -28,7 +28,7 @@
 ## Separate bongo and ring net tows starting: AR99 (winter 2026)
 ## PX sensor depth starting: AE2426 (fall 2024)
 ##
-## created JUN-2024 | updated AUG-2026
+## created JUN-2024 | updated SEP-2026
 ################################################################################
 
 ## ------------------------------------------ ##
@@ -93,10 +93,10 @@ combined_dataframe <- bind_rows(list_of_dataframes)
 class(combined_dataframe)
 combined_dataframe <- as.data.frame(combined_dataframe)
 
-## --- from nes-lter-api-pulls.Rproj download 10-AUG-2026 ---
+## --- from nes-lter-api-pulls.Rproj download 11-SEP-2026 ---
 # to add ring net entries ar99 and newer (separate ring net tows)
 event_log <- read_csv(here("data", "raw",
-                           "elog_zoop_tows_thruHRS2601_2026-08-10.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-11.csv"))
 
 ## ------------------------------------------ ##
 ##  Clean combined_dataframe for rbind with tow_meta_v2
@@ -313,7 +313,7 @@ lapply(combined_dataframe, unique)
 # position + time + (TDR depth) only;
 # non-quantitative (no flowmeter), so volume/haul stay NA.
 
-ring_cruises <- c("AR99") #hrs2601
+ring_cruises <- c("AR99", "HRS2601", "HRS2609")
 
 ring_tows <- event_log %>%
   filter(cruise %in% ring_cruises, grepl("^R", cast)) %>%
