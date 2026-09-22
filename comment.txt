@@ -6,8 +6,9 @@ To-Do:
 - add QAQC in R for the inventory csv
 - 00_packages ??? 
 - av speed lowering and raising wire
-- heatmap cruise data available sample type per cruise
+- heatmap cruise data available sample type per cruise (tdr proj good examples)
 - after checking flowmeters may have to go back and adjust volume if any bad
+- need to check coordinates (added in 05_tow_metadata_assemble) if elog wrong == coords wrong?
 
 QA/QC
 - export col file like i did with tdr data
