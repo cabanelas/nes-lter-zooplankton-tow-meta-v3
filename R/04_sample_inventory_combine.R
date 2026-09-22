@@ -138,3 +138,7 @@ inv_all <- inv_all %>%
 stamp <- format(Sys.Date(), "%Y%m%d")
 write_csv(inv_all, here("data", "processed",
                         glue::glue("sample_inventory_combined-{stamp}.csv")))
+
+################################################################################
+# go to -----------> 05_.R
+################################################################################

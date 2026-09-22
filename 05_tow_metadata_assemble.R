@@ -5,7 +5,7 @@
 ##
 ## Purpose: Fill every column that has NA from 03 script for the NEW v3 cruises, 
 ##          and produce the final combined tow-metadata table (2018-2026).
-##          v2 (older version) rows already carry all derived columns from the
+##          v2 (older version) rows already have all derived columns from the
 ##          published package and are left mostly untouched here; this script mainly
 ##          fills the columns that came in NA for the new cruises. couple exceptions
 ##          when a fix was needed
@@ -21,20 +21,21 @@
 ##
 ## Inputs (data/):
 ##  (data/processed/):
-## !!!UPDATE  - nes-lter-bongologs-{last}-YYYYMMDD.rds  (03_bongo_logs_merge.R)
+##   - tow-meta-v3-intermediate-{last_cruise}-YYYYMMDD.rds (03_bongo_logs_merge.R)
+##          formerly nes-lter-bongologs-{last}-YYYYMMDD.rds  
 ##   - shipspeed_eventlog_v3.csv               (02_ship_speed_eventlog_merge.R)
 ##   - sample_inventory_combined-YYYYMMDD.csv  (04_sample_inventory_combine.R)
 ##  (data/raw/):
-##   - elog_zoop_tows_thruHRS2609_2026-09-18.csv  (nes-lter-api-pulls)
+##   - elog_zoop_tows_thruHRS2609_2026-09-21.csv  (nes-lter-api-pulls)
 ##          https://github.com/cabanelas/nes-lter-api-pulls
-## !!!UPDATE   - nes-lter-bongo-tdr-offsets.csv             (nes-lter-tdr-bongo)
+##   - nes-lter-bongo-tdr-offsets.csv             (nes-lter-tdr-bongo)
 ##          https://github.com/cabanelas/nes-lter-tdr-bongo
 ##
 ## Outputs (data/processed/):
 ##   - nes-lter-zooplankton-tow-metadata-v3-YYYYMMDD.csv
 ################################################################################
 # EN608, AR28B, EN617 and some older cruises dont have ending coordinates
-# recover action not recorded on elog back them
+# recover action not recorded on elog back then
 
 ## ------------------------------------------ ##
 #            Packages -----
@@ -44,7 +45,7 @@ library(tidyverse)
 library(lubridate)
 
 ## ------------------------------------------ ##
-#            Constants / switches -----
+#            Constants  -----
 ## ------------------------------------------ ##
 #FLOW_FACTOR <- 0.026873              # m per revolution 
 NET_DIAM_M   <- 0.61                  # 61-cm bongo mouth
@@ -79,7 +80,7 @@ tow_meta <- readRDS(latest_bongolog)
 
 ## --- event log (for coordinates) --- ##
 event_log <- read_csv(here("data", "raw",
-                           "elog_zoop_tows_thruHRS2609_2026-09-18.csv"))
+                           "elog_zoop_tows_thruHRS2609_2026-09-21.csv"))
 
 ## --- PX + TDR --- ##
 tdr <- read_csv(here("data", "raw", "nes-lter-bongo-tdr-offsets.csv"))

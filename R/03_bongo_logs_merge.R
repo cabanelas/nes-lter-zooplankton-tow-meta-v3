@@ -575,5 +575,5 @@ saveRDS(tow_meta_v3, here("data", "processed",
                            glue::glue("tow-meta-v3-intermediate-{stamp}.rds")))
 
 ################################################################################
-# go to -----------> 04_tow_metadata_assemble.R
+# go to -----------> 04_sample_inventory_combine.R
 ################################################################################
