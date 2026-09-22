@@ -145,6 +145,7 @@ tow_meta <- tow_meta %>%
 # AR92   L6  : lat
 # AR95   MVCO: lon
 # AR95   L6  : lon
+### !!! NEED TO CHECK AR61B L10
 elog_start_coords <- event_log %>%
   filter(action == "deploy") %>%
   mutate(net_type = net_type_from_cast(cast),
@@ -177,12 +178,13 @@ start_check %>%
 start_check %>%
   filter(dist_m > 500) %>%
   arrange(desc(dist_m)) %>%
-  select(cruise, station, cast, latitude_start, lat_start_elog,
+  select(cruise, station, cast, net_type, latitude_start, lat_start_elog,
          longitude_start, lon_start_elog, dist_m) %>%
   print(n = Inf)
 
 tow_meta <- tow_meta %>%
-  left_join(elog_start_coords, by = c("cruise", "station", "cast", "net_type")) %>%
+  left_join(elog_start_coords, 
+            by = c("cruise", "station", "cast", "net_type")) %>%
   mutate(
     # AR38 L6: both coordinates
     latitude_start  = if_else(cruise == "AR38" & station == "L6",
