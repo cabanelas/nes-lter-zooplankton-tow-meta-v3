@@ -8,7 +8,11 @@ To-Do:
 - av speed lowering and raising wire
 - heatmap cruise data available sample type per cruise (tdr proj good examples)
 - after checking flowmeters may have to go back and adjust volume if any bad
+
 - need to check coordinates (added in 05_tow_metadata_assemble) if elog wrong == coords wrong?
+- check speed units in 05_tow_metadata_assemble
+- add mesh size column? in 05_tow_metadata_assemble
+- need to cross check tow meta inventory cols (the Y/N for the 335, 150 etc) vs actual invent sheet
 
 QA/QC
 - export col file like i did with tdr data
