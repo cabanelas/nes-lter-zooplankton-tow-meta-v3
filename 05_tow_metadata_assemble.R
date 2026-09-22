@@ -17,7 +17,7 @@
 ##    5. size_fract_20 (from inventory sheet)
 ##    6. volume        (keep flowmeter; fallback V=A*T*S where flowmeter == NA)
 ##    7. haul factors
-##    8. data flags
+##    8. data flags ###!!!CURRENTLY WORKING ON THIS
 ##
 ## Inputs (data/):
 ##  (data/processed/):
@@ -249,22 +249,11 @@ px_max <- tdr %>%
   group_by(cruise, station, cast, net_type) %>%
   summarize(depth_PX = max(px_max_depth_m, na.rm = TRUE), .groups = "drop")
 
-## --- merge and add missing depth_PX -- 
-# casts where PX data wasnt saved but depth written
-# EN727 L9 = 200
-# AR99 L2 = 44 & L9 = 205
-# AR95 L6 = 91
+## --- merge depth_PX -- 
+## manual PX depths (casts where sensor data was deleted but depth was
+## still known) now sourced upstream in 03_tdr_offsets.R -> px_maxdepth
 tow_meta <- tow_meta %>%
   left_join(px_max, by = c("cruise", "station", "cast", "net_type")) %>%
-  mutate(
-    depth_PX = case_when(          # manual fills where PX data was missing
-      sample_name == "EN727_L9_B11" ~ 200,
-      sample_name == "AR95_L6_B11" ~ 91,
-      sample_name == "AR99_L2_B3"  ~ 44,
-      sample_name == "AR99_L9_B5"  ~ 205,
-      TRUE ~ depth_PX
-    )
-  ) %>%
   relocate(depth_PX, .after = depth_TDR)
 
 tow_meta %>%
@@ -286,7 +275,7 @@ tow_meta %>%
 
 tow_meta <- tow_meta %>%
   mutate(
-    # adding "." to mark these cols as temporary
+    # "." == mark these cols as temporary
     .angle_rad = avg_angle * pi/180, # convert avg_angle to radians
     .tow_depth_calc = case_when(
       # vertical tow for Ring Net
@@ -298,6 +287,9 @@ tow_meta <- tow_meta %>%
     # Fill net_max_depth ONLY where it's currently NA (new cruises), preserving v2
     net_max_depth = case_when(
       # EN712 / EN720: use corrected depth_TDR
+      # !!!!! MAY NEED TO CORRECT HRS2303 & EN706...## 
+      ## the depth_tdr column is corrected hgere but not the net_max_depth unless
+      # excluded lie en712 and en720
       cruise %in% c("EN712","EN720") & !is.na(depth_TDR) ~ depth_TDR,
       !is.na(net_max_depth)   ~ net_max_depth,     # PRESERVE v2 / logsheet
       !is.na(depth_TDR) & !is.na(depth_PX) ~ (depth_TDR + depth_PX) / 2,  # both -> average
@@ -308,12 +300,35 @@ tow_meta <- tow_meta %>%
       TRUE ~ NA_real_
     )
   ) 
-  
+
 # Check if net_max_depth_m is ever greater than depth_bottom
 tow_meta %>%
   filter(net_max_depth > depth_bottom) %>%
   mutate(difference = net_max_depth - depth_bottom) %>%
-  select(cruise, station, cast, depth_bottom, depth_TDR, net_max_depth, difference)
+  select(cruise, station, cast, depth_bottom, depth_TDR, net_max_depth, 
+         difference, comments) %>%
+  filter(difference > 5) %>% 
+  arrange(desc(difference)) %>% print(n = Inf, width = Inf)
+
+# EN695_L8_B6   == net_max_depth comes from wire angle calc
+## rest of EN695 although no TDR data; TDR max depths recorded
+# EN627_L4_B12  == within range; fine
+# EN617_L10_B18 == fine; look at comments on meta
+# EN706_L5_B6   == original depth used was bad tdr (although ctd used too see above)
+
+tow_meta %>%
+  filter(net_type == "bongo") %>%
+  group_by(station) %>%
+  summarize(
+    n_cruises   = n_distinct(cruise),
+    mean_bottom = mean(depth_bottom, na.rm = TRUE),
+    median_bottom = median(depth_bottom, na.rm = TRUE),
+    sd_bottom   = sd(depth_bottom, na.rm = TRUE),
+    min_bottom  = min(depth_bottom, na.rm = TRUE),
+    max_bottom  = max(depth_bottom, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  arrange(station)
 
 ## ========================================================================== ##
 ## 4) SPEEDS   (STW/SOG from script 02, new cruises; EN720 SOG override)
@@ -355,6 +370,10 @@ tow_meta <- tow_meta %>%
   ) %>%
   select(-ends_with("_new"))
 # Endeavor STW stays NA bc speedlog reports GPS-SOG, no STW
+# New cruises (EN720, EN727): STW_start/STW_end correctly stay NA.
+# v2-published Endeavor cruises: STW was a duplicate of SOG
+# harmless for the coalesce() in section 6 since the values match
+# v2-published data, where STW and SOG are identical for every single row
 
 ## ------------------------------------------ ##
 #      EN720: overwrite v2's placeholder SOG -----
@@ -380,26 +399,28 @@ tow_meta <- tow_meta %>%
 # Y if a 20um size-fraction sample exists (mesh_20_size_fract > 0), else N.
 # Fill only where size_fract_20 == NA; existing (v2) values preserved
 # AR99 exception: the 20um ring net became a SEPARATE deployment at AR99, so its
-# bongo tows carry no 20um sample -> "N", and the ring rows carry it -> "Y".
+# bongo tows carry no 20um sample -> "N", and the ring rows -> "Y".
 inv_sf20 <- inventory %>%
   group_by(cruise, station, cast) %>%
   summarize(size_fract_20_inv = if_else(any(mesh_20_size_fract > 0, 
                                             na.rm = TRUE),
-                                        "Y", "N"),
-            .groups = "drop")
+                                        "Y", "N"), .groups = "drop")
 
 tow_meta <- tow_meta %>%
   left_join(inv_sf20, by = c("cruise", "station", "cast")) %>%
   mutate(
     size_fract_20 = case_when(
-      cruise == "AR99" & net_type == "ring"  ~ "Y",
-      cruise == "AR99" & net_type == "bongo" ~ "N",
+      # cruise == "AR99" & net_type == "ring"  ~ "Y",
+      # cruise == "AR99" & net_type == "bongo" ~ "N",
+      year(datetime_UTC_start) >= 2026 & net_type == "ring"  ~ "Y",
+      year(datetime_UTC_start) >= 2026 & net_type == "bongo" ~ "N",
       is.na(size_fract_20)                   ~ size_fract_20_inv,
       TRUE                                   ~ size_fract_20
     )
   ) %>%
   select(-size_fract_20_inv)
 
+# -- manual fixes -- ##
 # Confirmed against logsheets & inventory Aug 2026 (QA vs sample inventory):
 #   AR63 L4 & L7 : size_fract_20  N -> Y
 #   AT46 L6      : DNA_335        Y -> N
@@ -432,7 +453,6 @@ tow_meta <- tow_meta %>%
 # The "0.26873 with counts/10" written in the old v2 scripts is NOT a bug: the
 # /10 == 0.026873 with raw counts. Both reproduce published volumes exactly.
 # checked cell-by-cell against knb-lter-nes.24.2 and AE2426/EN727/AR88/AR92 logsheets
-#
 #   >>> DO NOT combine (counts/10) WITH 0.026873 <<<  that is 10x too small.
 #
 # Flowmeter volumes here are KEPT as recorded; this script only computes the
@@ -440,7 +460,7 @@ tow_meta <- tow_meta %>%
 # re-applied below - it is documented for provenance.
 # tot_flow_counts is RAW counter revolutions (final reading - initial reading).
 # Published abundances used volumes from the tow-metadata CSV, so they inherit
-# this (correct) formula - they do NOT need republishing.
+# this (correct) formula.
 # =============================================================================
 
 # Volume Sampled m3 meters cubed:
@@ -449,16 +469,24 @@ tow_meta <- tow_meta %>%
 ## Volume Sampled m3 = (Flowmeter revolutions) * Flow calibration factor * Gear Area (m2)
 
 # tot_flow_counts_mesh <- flowmeter_end - flowmeter_start  # Total counts
-# revolutions <- total_counts / 10  # counts to revolutions
+# revolutions <- total_counts / 10   # counts to revolutions
 # total flow <- revolutions * 26873  # Standard Speed Rotor Constant
 
-#diameter_m <- 0.61  # diameter in meters
-#radius_m <- diameter_m / 2  # radius in meters (0.305)
-#A <- pi * radius_m^2  # area of the net mouth in square meters (0.2922)
+# diameter_m <- 0.61  # diameter in meters
+# radius_m <- diameter_m / 2  # radius in meters (0.305)
+# A <- pi * radius_m^2  # area of the net mouth in square meters (0.2922)
 
 # haul factor as specified for EcoMon & CalCOFI cruises
 
 # Flowmeter volumes already present & verified correct (logsheet + v2) -> KEEP
+
+## ------------------------------------------ ##
+#     6a) Fallback volume: V = A * T * S -----
+## ------------------------------------------ ##
+# Only used where the flowmeter volume is missing (NA).
+#   A = net mouth area (m^2)   -> A_MOUTH, constant
+#   T = tow duration (s)       -> from start/end datetimes
+#   S = tow speed (m/s)        -> best available ship speed, converted from knots
 
 # When flowmeter vol == NA -> Compute  V = A * T * S 
 #   T = tow duration (s);  S = tow speed (m/s)
@@ -469,21 +497,44 @@ SPEED_MIN_KT <- 1
 SPEED_MAX_KT <- 4
 
 # helper: keep a speed only if it's in range, else NA (so coalesce moves on)
-.valid <- function(x) if_else(!is.na(x) & abs(x) >= SPEED_MIN_KT & abs(x) <= SPEED_MAX_KT, abs(x), NA_real_)
+.valid <- function(x) {
+  if_else(!is.na(x) & abs(x) >= SPEED_MIN_KT & abs(x) <= SPEED_MAX_KT,
+          abs(x), NA_real_)
+}
 
 tow_meta <- tow_meta %>%
   mutate(
-    .dur_s = as.numeric(difftime(datetime_UTC_end, datetime_UTC_start, units = "secs")),
-    .dur_s = if_else(.dur_s < 0, .dur_s + 24*3600, .dur_s),
+    # --- T: tow duration in seconds ---
+    .dur_s = as.numeric(difftime(datetime_UTC_end, datetime_UTC_start, 
+                                 units = "secs")),
+    # negative duration = tow crossed midnight but the end date wasn't
+    # rolled forward -> add one day
+ ###!!DOUBLECHECK
+ .dur_s = if_else(.dur_s < 0, .dur_s + 24*3600, .dur_s),
+    
+    # --- S: tow speed ---
+    # priority: speed through water (STW) before speed over ground (SOG),
+    # and start-of-tow before end-of-tow; each one must pass .valid()
     # each source screened for plausibility, then prioritized
     .speed_kt = coalesce(.valid(STW_start), .valid(STW_end),
                          .valid(SOG_start), .valid(SOG_end)),
-    .speed_ms = .speed_kt * KT_TO_MS,
+    .speed_ms = .speed_kt * KT_TO_MS, # knots -> m/s
+    
+    # --- V = A * T * S (m^3); computed for every row, used only where needed ---
     .vol_calc = A_MOUTH * .dur_s * .speed_ms,
-    .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo" & cruise %in% new_cruises,
-    .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo" & cruise %in% new_cruises,
+    
+    # --- which rows need the fallback? ---
+    # new-cruise bongo tows with no flowmeter volume
+    .vol335_was_na = is.na(vol_filtered_335) & net_type == "bongo" & 
+                      cruise %in% new_cruises,
+    .vol150_was_na = is.na(vol_filtered_150) & net_type == "bongo" & 
+                      cruise %in% new_cruises,
+    
+    # --- fill only the missing volumes; flowmeter values are left as-is ---
     vol_filtered_335 = if_else(.vol335_was_na, .vol_calc, vol_filtered_335),
     vol_filtered_150 = if_else(.vol150_was_na, .vol_calc, vol_filtered_150),
+    
+    # --- ring nets are vertical tows with no flowmeter -> volume stays NA ---
     vol_filtered_335 = if_else(net_type == "ring", NA_real_, vol_filtered_335),
     vol_filtered_150 = if_else(net_type == "ring", NA_real_, vol_filtered_150)
   )
@@ -611,7 +662,7 @@ for (i in seq_len(nrow(flag_rules))) {
 ## new-cruise spills: append net-specific spill note. hand-mapped - comments
 ## are tangled and most rows already carry a cod-end/flowmeter note.
 spill_335 <- c("EN727_L9_B11", "AR88_L9_B15", "AR92_L11_B11", "AR95_L1_B1")
-spill_150 <- c("AR88_L3_B18", "AR88_L2_B19", "AR95_L9_B16", "AR99_L1_B2")
+spill_150 <- c("AR88_L3_B18", "AR88_L2_B19", "AR95_L9_B16", "AR99_L1_B2")# "HRS2609_L2_B2"
 
 tow_meta <- tow_meta %>%
   mutate(
@@ -626,6 +677,9 @@ tow_meta <- tow_meta %>%
     .sec = na_if(.sec, "")
   ) %>%
   select(-.spill_note)
+
+# no_335 <- c("AR99_L3_B18")   # 335 cod end broke off during recovery
+# no_150 <- c("AR95_L6_B11")   # 150 net ripped, sample not processed
 
 tow_meta %>%
   filter(cruise %in% new_cruises) %>%
@@ -829,7 +883,7 @@ tow_meta <- tow_meta %>%
     primary_flag = if_else(sample_name %in% c(lost_335, lost_150, lost_generic),
                            pmax(coalesce(primary_flag, 1L), 3L), primary_flag)
   )
-##!!!!! CHECK AR88 L9 B15 getting double lbel.
+##!!!!! CHECK AR88 L9 B15 getting double lbel. may be able to delete this bit
 tow_meta %>%
   filter(sample_name %in% c(lost_335, lost_150, lost_generic,
                             "EN661_L11_B10", "AT46_L7_B14", "AR88_L9_B15")) %>%
